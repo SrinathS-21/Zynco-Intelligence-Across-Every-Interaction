@@ -45,3 +45,31 @@ model Agent {
 
   @@index([userId, type])
 }
+
+model ScheduledMessage {
+  id           String    @id @default(cuid())
+  userId       String
+  platform     String    @default("whatsapp")
+  to           String
+  content      String
+  scheduledFor DateTime
+  status       String    @default("PENDING") // PENDING, SENT, FAILED
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId, status, scheduledFor])
+}
+
+model UnifiedMessage {
+  id           String    @id @default(cuid())
+  userId       String
+  platform     String    @default("whatsapp")
+  contactId    String    // e.g. number@c.us
+  contactName  String?
+  content      String
+  direction    String    @default("INBOUND") // INBOUND or OUTBOUND
+  timestamp    DateTime  @default(now())
+  metadata     Json?     @default("{}")
+
+  @@index([userId, platform, contactId, timestamp])
+}

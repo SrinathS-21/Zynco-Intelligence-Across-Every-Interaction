@@ -10,7 +10,7 @@ import {
     PanelRight, X, Plus, ExternalLink, Loader2, Newspaper, Bell, Bot,
     User, Megaphone, Play, Clock, History, Paperclip, Target,
     MoreHorizontal, Menu, Reply, ReplyAll, Forward,
-    CheckCircle2, HelpCircle, VolumeX, type LucideIcon
+    CheckCircle2, HelpCircle, VolumeX, LayoutDashboard, type LucideIcon
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -613,6 +613,8 @@ export function EmailDashboard(props: EmailDashboardProps) {
 
                 <nav className="py-3 px-2 space-y-1">
                     {[
+                        { id: 'unified', label: 'Unified Hub', icon: LayoutDashboard, count: 0, premium: true },
+                        { id: 'onboarding', label: 'Connect Channels', icon: Plus, count: 0 },
                         { id: 'focus', label: 'Focus', icon: Target, count: 0 },
                         { id: 'inbox', label: 'All Mail', icon: Mail, count: emailState.emails.length },
                         { id: 'attachments', label: 'Attachments', icon: Paperclip, count: emailState.emails.filter((e: any) => e.attachments && e.attachments.length > 0).reduce((acc: number, e: any) => acc + (e.attachments?.length || 0), 0) },
@@ -626,6 +628,14 @@ export function EmailDashboard(props: EmailDashboardProps) {
                             key={item.id}
                             id={`tutorial-sidebar-${item.id}`}
                             onClick={() => {
+                                if (item.id === 'unified') {
+                                    window.location.href = "/dashboard/unified";
+                                    return;
+                                }
+                                if (item.id === 'onboarding') {
+                                    window.location.href = "/onboarding";
+                                    return;
+                                }
                                 setSelectedFolder(item.id);
                                 emailState.setSelectedLabel(null); // Clear label filter when switching folders
                             }}
