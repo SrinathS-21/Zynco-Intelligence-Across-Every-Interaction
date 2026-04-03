@@ -39,7 +39,10 @@ import {
   Play,
   Pause,
   ShieldCheck,
-  Copy
+  Copy,
+  ChevronDown,
+  BarChart3,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useCallback, useEffect } from "react";
@@ -52,6 +55,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import EmailClassifierEditor from "@/features/standalone-agents/agents/gmail-classifier/editor";
+import ZyncoChatbot from "./ZyncoChatbot";
 
 // Local platform definition to avoid top-level collision
 const DASHBOARD_PLATFORMS = [
@@ -1178,8 +1182,6 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
 
                         <div className="pt-10 flex flex-col items-center gap-4">
                            <div className="w-12 h-12 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin" />
-                        <div className="pt-10 flex flex-col items-center gap-4">
-                           <div className="w-12 h-12 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin" />
                            <p className="text-xs font-black text-slate-300 uppercase tracking-[0.3em]">Syncing Orchestration Cache</p>
                         </div>
                       </div>
@@ -1595,6 +1597,8 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
           </motion.main>
         )}
       </AnimatePresence>
+
+      <ZyncoChatbot />
     </div>
   );
 }
