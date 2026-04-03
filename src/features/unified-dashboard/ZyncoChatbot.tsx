@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, X, SendHorizontal, Bot, BarChart3, Users, Zap, MessageSquare, Instagram, Twitter, Linkedin, ChevronDown } from "lucide-react";
+import { Sparkles, X, SendHorizontal, Bot, BarChart3, Users, Zap, MessageSquare, Instagram, Linkedin, ChevronDown } from "lucide-react";
 
 interface Message {
   id: string;
@@ -10,6 +10,8 @@ interface Message {
   content: string;
   timestamp: Date;
 }
+
+const CHAT_API_ENDPOINT = "/api/ai/chat";
 
 const QUICK_ACTIONS = [
   { label: "Generate Report", icon: BarChart3, prompt: "Give me a full cross-platform performance report for today." },
@@ -41,6 +43,16 @@ function getAIResponse(message: string): string {
   return AI_RESPONSES.default;
 }
 
+function renderInlineStrong(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>;
+    }
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
+}
+
 function MarkdownText({ content }: { content: string }) {
   const lines = content.split('\n');
   return (
@@ -50,7 +62,7 @@ function MarkdownText({ content }: { content: string }) {
           return (
             <div key={i} className="flex gap-2 text-sm text-slate-700 leading-relaxed">
               <span className="text-blue-500 mt-0.5 shrink-0">•</span>
-              <span dangerouslySetInnerHTML={{ __html: line.replace(/^[•\-]\s*/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+              <span>{renderInlineStrong(line.replace(/^[•\-]\s*/, ''))}</span>
             </div>
           );
         }
@@ -58,13 +70,13 @@ function MarkdownText({ content }: { content: string }) {
           return (
             <div key={i} className="flex gap-2 text-sm text-slate-700 leading-relaxed">
               <span className="text-blue-500 font-bold shrink-0">{line.match(/^\d+/)?.[0]}.</span>
-              <span dangerouslySetInnerHTML={{ __html: line.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+              <span>{renderInlineStrong(line.replace(/^\d+\.\s*/, ''))}</span>
             </div>
           );
         }
         if (line === '') return <div key={i} className="h-1" />;
         return (
-          <p key={i} className="text-sm text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+          <p key={i} className="text-sm text-slate-700 leading-relaxed">{renderInlineStrong(line)}</p>
         );
       })}
     </div>
@@ -83,6 +95,7 @@ export default function ZyncoChatbot() {
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -93,23 +106,67 @@ export default function ZyncoChatbot() {
   }, [isOpen]);
 
   useEffect(() => {
+    const onEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, []);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
   const sendMessage = async (text: string) => {
-    if (!text.trim()) return;
+    const trimmed = text.trim();
+    if (!trimmed || isTyping) return;
 
-    const userMsg: Message = { id: Date.now().toString(), role: "user", content: text.trim(), timestamp: new Date() };
+    const userMsg: Message = { id: Date.now().toString(), role: "user", content: trimmed, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     setIsTyping(true);
+    setRequestError(null);
 
-    await new Promise(r => setTimeout(r, 1000 + Math.random() * 800));
+    try {
+      const response = await fetch(CHAT_API_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: trimmed,
+          history: messages.slice(-8).map((msg) => ({ role: msg.role, content: msg.content })),
+        }),
+      });
 
-    const aiResponse = getAIResponse(text);
-    const aiMsg: Message = { id: (Date.now() + 1).toString(), role: "assistant", content: aiResponse, timestamp: new Date() };
-    setMessages(prev => [...prev, aiMsg]);
-    setIsTyping(false);
+      if (!response.ok) {
+        throw new Error(`AI request failed with status ${response.status}`);
+      }
+
+      const data = await response.json() as { reply?: string };
+      const aiMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.reply?.trim() || getAIResponse(trimmed),
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, aiMsg]);
+    } catch {
+      const fallbackMessage = getAIResponse(trimmed);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: fallbackMessage,
+          timestamp: new Date(),
+        },
+      ]);
+      setRequestError("Realtime AI is temporarily unavailable. Showing a smart fallback response.");
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -120,7 +177,7 @@ export default function ZyncoChatbot() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3">
+    <div className="fixed bottom-4 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 z-9999 flex flex-col items-end gap-3">
       {/* Chat Window */}
       <AnimatePresence>
         {isOpen && (
@@ -129,7 +186,7 @@ export default function ZyncoChatbot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            style={{ width: 420, height: 600 }}
+            style={{ width: "100%", maxWidth: 420, height: "min(75dvh, 600px)", maxHeight: "calc(100dvh - 7rem)" }}
             className="flex flex-col rounded-3xl overflow-hidden shadow-2xl"
             // Fully opaque, no transparency
           >
@@ -151,6 +208,7 @@ export default function ZyncoChatbot() {
                 onClick={() => setIsOpen(false)}
                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
                 style={{ color: '#64748b' }}
+                aria-label="Close chatbot"
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
@@ -206,6 +264,12 @@ export default function ZyncoChatbot() {
                 </div>
               )}
 
+              {requestError && (
+                <div className="rounded-xl px-3 py-2 text-xs font-medium border" style={{ background: '#fffbeb', color: '#92400e', borderColor: '#fde68a' }}>
+                  {requestError}
+                </div>
+              )}
+
               {/* Quick actions — only show if just welcome message */}
               {messages.length === 1 && !isTyping && (
                 <div className="space-y-2 pt-2">
@@ -215,6 +279,7 @@ export default function ZyncoChatbot() {
                       <button
                         key={action.label}
                         onClick={() => sendMessage(action.prompt)}
+                        disabled={isTyping}
                         className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-left transition-all"
                         style={{ background: 'white', border: '1px solid #e2e8f0', fontSize: 11, fontWeight: 700, color: '#475569' }}
                         onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.color = '#2563eb'; }}
@@ -248,6 +313,7 @@ export default function ZyncoChatbot() {
                   onClick={() => sendMessage(input)}
                   disabled={!input.trim() || isTyping}
                   className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all"
+                  aria-label="Send message"
                   style={{
                     background: input.trim() && !isTyping ? '#2563eb' : '#e2e8f0',
                     cursor: input.trim() && !isTyping ? 'pointer' : 'not-allowed'
@@ -270,6 +336,7 @@ export default function ZyncoChatbot() {
         whileTap={{ scale: 0.94 }}
         onClick={() => setIsOpen(prev => !prev)}
         className="w-16 h-16 rounded-2xl flex items-center justify-center relative"
+        aria-label={isOpen ? "Close chatbot" : "Open chatbot"}
         style={{
           background: isOpen ? '#0f172a' : '#2563eb',
           boxShadow: isOpen ? '0 8px 32px rgba(15,23,42,0.4)' : '0 8px 32px rgba(37,99,235,0.5)',
