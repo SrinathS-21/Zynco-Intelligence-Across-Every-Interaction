@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Patient {
+  id           String        @id @default(cuid())
+  phoneNumber  String        @unique
+  name         String?
+  email        String?
+  address      String?
+  dateOfBirth  String?
+  bloodGroup   String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  preferences  Json?         // Stores patient preferences like preferred doctor/department
+  appointments Appointment[]
+  messages     Message[]
+  conversations Conversation[]
+}
+
+model Doctor {
+  id             String        @id @default(cuid())
+  name           String
+  department     String
+  specialization String?
+  image          String?       // URL to doctor's profile picture
+  availability   Json?         // Working hours/days
+  appointments   Appointment[]
+}
+
+model Appointment {
+  id        String   @id @default(cuid())
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  patientId String
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+  doctorId  String
+  date      DateTime
+  time      String   
+  status    String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED, COMPLETED
+  notes     String?
+  cardUrl   String?  // Storage for the generated Canva-like card image URL
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  patient   Patient   @relation(fields: [patientId], references: [id])
+  patientId String
+  status    String    @default("ACTIVE") // ACTIVE, ARCHIVED
+  intent    String?
+  state     String?   // Current step in workflow (e.g., SELECTING_DOCTOR, CONFIRMING_TIME)
+  metadata  Json?     // To store temporary state data
+  messages  Message[]
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  patient        Patient?     @relation(fields: [patientId], references: [id])
+  patientId      String?
+  role           String       // 'user' or 'bot'
+  content        String       @db.Text
+  type           String       @default("text") // text, image, button, list
+  metadata       Json?        // For storing button IDs, image URLs etc.
+  timestamp      DateTime     @default(now())
+}
+
+// NextAuth Models
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}

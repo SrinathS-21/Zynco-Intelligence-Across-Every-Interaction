@@ -1,0 +1,155 @@
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    margin-top: 1rem;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.dotConnected {
+    background-color: var(--success);
+    box-shadow: 0 0 10px var(--success);
+}
+
+.dotConnecting {
+    background-color: #f59e0b;
+    box-shadow: 0 0 10px #f59e0b;
+    animation: pulse 1.5s infinite;
+}
+
+.dotDisconnected {
+    background-color: var(--error);
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.qrContainer {
+    text-align: center;
+    padding: 2rem;
+    border: 2px dashed var(--border);
+    border-radius: 1rem;
+    background: var(--background);
+}
+
+.qrImageWrapper {
+    background: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    display: inline-block;
+    margin: 1.5rem 0;
+    box-shadow: var(--shadow);
+}
+
+.qrImage {
+    display: block;
+    max-width: 256px;
+    height: auto;
+}
+
+.hint {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.successBox {
+    padding: 2rem;
+    border-radius: 1rem;
+    background: rgba(16, 185, 129, 0.1);
+    border: 2px solid var(--success);
+    text-align: center;
+}
+
+.idleBox {
+    text-align: center;
+    padding: 3rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border);
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 2rem auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.securitySection {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.securityCard {
+    padding: 1.5rem;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    transition: transform 0.2s ease;
+}
+
+.securityCard:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+}
+
+.securityCard h4 {
+    margin-bottom: 0.5rem;
+    color: var(--primary);
+}
+
+.securityCard p {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+}

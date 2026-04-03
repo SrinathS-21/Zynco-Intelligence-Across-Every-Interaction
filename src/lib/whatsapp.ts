@@ -2,6 +2,9 @@ import { Client, LocalAuth } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
 import { prisma } from './db';
 import { addMinutes, isPast } from 'date-fns';
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -10,191 +13,199 @@ declare global {
   var __whatsappQr: string | undefined;
   // eslint-disable-next-line no-var
   var __whatsappStatus: 'INITIALIZING' | 'READY' | 'QR' | 'DISCONNECTED' | 'AUTHENTICATING';
+  // eslint-disable-next-line no-var
+  var __whatsappRule: any | undefined;
+  // eslint-disable-next-line no-var
+  var __whatsappInitPromise: Promise<any> | undefined;
 }
 
 global.__whatsappStatus = global.__whatsappStatus || 'DISCONNECTED';
 
-export const getWhatsAppClient = () => {
-    if (global.__whatsappClient) return global.__whatsappClient;
+export const getWhatsAppClient = async () => {
+    // 1. Re-use existing connected client
+    if (global.__whatsappClient && (global.__whatsappStatus === 'READY' || global.__whatsappStatus === 'QR')) {
+        return global.__whatsappClient;
+    }
 
-    const client = new Client({
-        authStrategy: new LocalAuth({ 
-            clientId: "zynco-hub",
-            dataPath: "./.wwebjs_auth" 
-        }),
-        puppeteer: {
-            headless: true,
-            args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu'
-            ],
-        }
-    });
+    // 2. Await already running initialization promise
+    if (global.__whatsappInitPromise) {
+        return global.__whatsappInitPromise;
+    }
 
-    client.on('qr', async (qr) => {
-        console.log('WhatsApp QR Received');
-        global.__whatsappQr = await qrcode.toDataURL(qr);
-        global.__whatsappStatus = 'QR';
-    });
-
-    client.on('ready', () => {
-        console.log('WhatsApp Client is ready!');
-        global.__whatsappStatus = 'READY';
-        global.__whatsappQr = undefined;
-        
-        // Start scheduler when ready
-        startScheduler();
-    });
-
-    client.on('message', async (msg) => {
-        const currentPrisma = global.__mailAgentPrisma || prisma;
-        if (!currentPrisma) return;
-
+    // 3. Start a new clean bootstrap
+    console.log('🚀 [WHATSAPP] Starting clean bootstrap sequence...');
+    global.__whatsappInitPromise = (async () => {
         try {
-            const contact = await msg.getContact();
-            await currentPrisma.unifiedMessage.create({
-                data: {
-                    userId: 'default',
-                    platform: 'whatsapp',
-                    contactId: msg.from,
-                    contactName: contact.pushname || contact.name || msg.from.split('@')[0],
-                    content: msg.body,
-                    direction: 'INBOUND',
+            const sessionPath = path.join(process.cwd(), '.wwebjs_auth/session-zynco-hub');
+            
+            // Kernel-level force purge of any orphaned browsers using our profile
+            try {
+                const killCmd = `ps aux | grep "${sessionPath}" | grep -v grep | awk '{print $2}' | xargs kill -9 2>/dev/null || true`;
+                execSync(killCmd);
+                
+                if (fs.existsSync(sessionPath)) {
+                    const files = fs.readdirSync(sessionPath);
+                    for (const file of files) {
+                        if (file.startsWith('Single')) {
+                            try { fs.unlinkSync(path.join(sessionPath, file)); } catch (e) {}
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Silent cleanup bypass.');
+            }
+
+            // Sync OS handles
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            const client = new Client({
+                authStrategy: new LocalAuth({ 
+                    clientId: "zynco-hub",
+                    dataPath: "./.wwebjs_auth" 
+                }),
+                puppeteer: {
+                    headless: true,
+                    args: [
+                        '--no-sandbox', 
+                        '--disable-setuid-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-accelerated-2d-canvas',
+                        '--no-first-run',
+                        '--no-zygote',
+                        '--single-process',
+                        '--disable-gpu',
+                        '--disable-canvas-aa',
+                        '--disable-2d-canvas-clip-aa',
+                        '--disable-gl-drawing-for-tests',
+                        '--disable-notifications',
+                        '--disable-extensions',
+                        '--disable-blink-features=AutomationControlled',
+                        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    ],
                 }
             });
-            console.log(`Saved WhatsApp Message from ${msg.from}`);
-        } catch (err) {
-            console.error('Failed to save message:', err);
+
+            client.on('qr', async (qr) => {
+                console.log('WhatsApp QR Generated');
+                global.__whatsappQr = await qrcode.toDataURL(qr);
+                global.__whatsappStatus = 'QR';
+            });
+
+            client.on('ready', () => {
+                console.log('WhatsApp Client Online');
+                global.__whatsappStatus = 'READY';
+                global.__whatsappQr = undefined;
+                startScheduler();
+            });
+
+            client.on('authenticated', () => {
+                console.log('WhatsApp Authenticated (Mapping to READY)...');
+                global.__whatsappStatus = 'READY';
+                global.__whatsappQr = undefined;
+            });
+
+            client.on('auth_failure', () => {
+                console.error('WhatsApp Auth failure');
+                resetGlobal();
+            });
+
+            client.on('disconnected', () => {
+                console.log('WhatsApp Socket Terminated');
+                resetGlobal();
+            });
+
+            client.on('message', async (msg) => {
+                const currentPrisma = global.__mailAgentPrisma || prisma;
+                if (!currentPrisma) return;
+
+                try {
+                    const contact = await msg.getContact();
+                    await currentPrisma.unifiedMessage.create({
+                        data: {
+                            userId: 'default',
+                            platform: 'whatsapp',
+                            contactId: msg.from,
+                            contactName: contact.pushname || contact.name || msg.from.split('@')[0],
+                            content: msg.body,
+                            direction: 'INBOUND',
+                        }
+                    });
+
+                    // --- AI AUTO-RESPONDER ENGINE ---
+                    if (global.__whatsappRule) {
+                        await new Promise(resolve => setTimeout(resolve, 2000)); 
+                        const persona = global.__whatsappRule.persona || 'friendly assistant';
+                        const responseText = `*[Zynco AI]* Thanks for reaching out! I'm acting as a ${persona} today.\n\n_Auto-Reply Active._`;
+                        await msg.reply(responseText);
+                        
+                        await currentPrisma.unifiedMessage.create({
+                            data: {
+                                userId: 'default', platform: 'whatsapp', contactId: msg.from,
+                                contactName: contact.pushname || contact.name || msg.from.split('@')[0],
+                                content: responseText, direction: 'OUTBOUND',
+                            }
+                        });
+                    }
+                } catch (err) { console.error('Message save failed:', err); }
+            });
+
+            global.__whatsappStatus = 'INITIALIZING';
+            await client.initialize();
+            
+            global.__whatsappClient = client;
+            global.__whatsappInitPromise = undefined; // Clear the init promise once fully booted
+            return client;
+
+        } catch (error) {
+            console.error('Critical WhatsApp Startup Failure:', error);
+            resetGlobal();
+            throw error;
         }
-    });
+    })();
 
-    client.on('authenticated', () => {
-        console.log('WhatsApp Authenticated');
-        global.__whatsappStatus = 'AUTHENTICATING';
-    });
-
-    client.on('auth_failure', (msg) => {
-        console.error('WhatsApp Auth failure', msg);
-        global.__whatsappStatus = 'DISCONNECTED';
-    });
-
-    client.on('disconnected', (reason) => {
-        console.log('WhatsApp Disconnected:', reason);
-        global.__whatsappStatus = 'DISCONNECTED';
-        global.__whatsappClient = undefined;
-        global.__whatsappQr = undefined;
-    });
-
-    try {
-        client.initialize().catch(err => {
-            console.error('Initial initialization failed:', err);
-            global.__whatsappStatus = 'DISCONNECTED';
-        });
-    } catch (err) {
-        console.error('WhatsApp bootstrap error:', err);
-    }
-
-    global.__whatsappClient = client;
-    global.__whatsappStatus = 'INITIALIZING';
-
-    return client;
+    return global.__whatsappInitPromise;
 };
 
-export const resetWhatsApp = async () => {
-    if (global.__whatsappClient) {
-        try {
-            await global.__whatsappClient.destroy();
-        } catch (e) {
-            console.error('Error destroying client:', e);
-        }
-        global.__whatsappClient = undefined;
-    }
+function resetGlobal() {
+    global.__whatsappClient = undefined;
+    global.__whatsappInitPromise = undefined;
     global.__whatsappStatus = 'DISCONNECTED';
     global.__whatsappQr = undefined;
-};
+}
 
 export const getWhatsAppStatus = () => ({
-    status: global.__whatsappStatus,
+    status: global.__whatsappStatus || 'DISCONNECTED',
     qr: global.__whatsappQr
 });
 
-// Scheduler implementation
+export const resetWhatsApp = async () => {
+    if (global.__whatsappClient) {
+        try { await global.__whatsappClient.destroy(); } catch (e) {}
+    }
+    resetGlobal();
+};
+
+// Existing Scheduler
 let schedulerRunning = false;
 const startScheduler = () => {
     if (schedulerRunning) return;
     schedulerRunning = true;
-    
-    console.log('WhatsApp Scheduler Started');
-    
     setInterval(async () => {
         if (global.__whatsappStatus !== 'READY' || !global.__whatsappClient) return;
-        
-        // Use global prisma or fallback to the direct import
-        // This avoids issues with closures capturing stale values in some environments
         const currentPrisma = global.__mailAgentPrisma || prisma;
-        if (!currentPrisma) {
-            console.error('Prisma client not initialized yet for WhatsApp Scheduler');
-            return;
-        }
-
-        if (!currentPrisma.scheduledMessage) {
-            console.error('CRITICAL: ScheduledMessage model NOT found in Prisma client! A dev server RESTART is required.');
-            return;
-        }
-
+        if (!currentPrisma || !currentPrisma.scheduledMessage) return;
         try {
             const pending = await currentPrisma.scheduledMessage.findMany({
-                where: {
-                    status: 'PENDING',
-                    platform: 'whatsapp',
-                    scheduledFor: {
-                        lte: new Date() // Past or now
-                    }
-                },
-                take: 5 // Process in small batches
+                where: { status: 'PENDING', platform: 'whatsapp', scheduledFor: { lte: new Date() } }
             });
-            
             for (const msg of pending) {
-                console.log(`Sending scheduled WhatsApp message to ${msg.to}...`);
                 try {
-                    // msg.to should already be normalized if saved via our API
-                    // but we ensure it here just in case
-                    const client = global.__whatsappClient;
-                    
-                    // Already an ID format number@c.us
-                    if (msg.to.includes('@')) {
-                        await client.sendMessage(msg.to, msg.content);
-                    } else {
-                        // Try to resolve if it's just a number
-                        const cleanNumber = msg.to.replace(/\D/g, '');
-                        const numberId = await client.getNumberId(cleanNumber);
-                        if (numberId) {
-                            await client.sendMessage(numberId._serialized, msg.content);
-                        } else {
-                            throw new Error('Number not on WhatsApp');
-                        }
-                    }
-                    
-                    await currentPrisma.scheduledMessage.update({
-                        where: { id: msg.id },
-                        data: { status: 'SENT' }
-                    });
-                    console.log(`Scheduled message ${msg.id} sent successfully!`);
+                    await global.__whatsappClient!.sendMessage(msg.to, msg.content);
+                    await currentPrisma.scheduledMessage.update({ where: { id: msg.id }, data: { status: 'SENT' } });
                 } catch (err) {
-                    console.error(`Failed to send ${msg.id}:`, err);
-                    await currentPrisma.scheduledMessage.update({
-                        where: { id: msg.id },
-                        data: { status: 'FAILED' }
-                    });
+                    await currentPrisma.scheduledMessage.update({ where: { id: msg.id }, data: { status: 'FAILED' } });
                 }
             }
-        } catch (err) {
-            console.error('Scheduler error:', err);
-        }
-    }, 15000); // Check more frequently (15s) for better responsiveness
+        } catch (e) {}
+    }, 60000);
 };

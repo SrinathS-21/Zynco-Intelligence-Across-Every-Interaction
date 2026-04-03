@@ -1,0 +1,15 @@
+2026/02/24-13:56:28.674 c2741a Reusing MANIFEST /Users/macbook/Downloads/Library/PROJECTS/SPINaBOT/Whatsapp-agent/.wwebjs_auth/session-hospital-bot/Default/Local Storage/leveldb/MANIFEST-000001
+2026/02/24-13:56:28.691 c2741a Recovering log #37
+2026/02/24-13:56:28.692 c2741a Reusing old log /Users/macbook/Downloads/Library/PROJECTS/SPINaBOT/Whatsapp-agent/.wwebjs_auth/session-hospital-bot/Default/Local Storage/leveldb/000037.log 
+2026/02/24-13:59:30.317 c2741c Level-0 table #41: started
+2026/02/24-13:59:30.320 c2741c Level-0 table #41: 20062 bytes OK
+2026/02/24-13:59:30.323 c2741c Delete type=0 #37
+2026/02/24-13:59:30.325 c2741c Compacting 4@0 + 1@1 files
+2026/02/24-13:59:30.328 c2741c Generated table #42@0: 257 keys, 19491 bytes
+2026/02/24-13:59:30.328 c2741c Compacted 4@0 + 1@1 files => 19491 bytes
+2026/02/24-13:59:30.330 c2741c compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/02/24-13:59:30.330 c2741c Delete type=2 #38
+2026/02/24-13:59:30.330 c2741c Delete type=2 #36
+2026/02/24-13:59:30.330 c2741c Delete type=2 #33
+2026/02/24-13:59:30.330 c2741c Delete type=2 #30
+2026/02/24-13:59:30.330 c2741c Delete type=2 #41

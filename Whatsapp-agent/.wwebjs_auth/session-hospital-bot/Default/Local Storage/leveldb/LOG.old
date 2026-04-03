@@ -1,0 +1,9 @@
+2026/02/21-22:21:15.174 aa4662 Reusing MANIFEST /Users/macbook/Downloads/Library/PROJECTS/SPINaBOT/Whatsapp-agent/.wwebjs_auth/session-hospital-bot/Default/Local Storage/leveldb/MANIFEST-000001
+2026/02/21-22:21:15.186 aa4662 Recovering log #32
+2026/02/21-22:21:15.187 aa4662 Reusing old log /Users/macbook/Downloads/Library/PROJECTS/SPINaBOT/Whatsapp-agent/.wwebjs_auth/session-hospital-bot/Default/Local Storage/leveldb/000032.log 
+2026/02/21-23:32:15.740 aa4663 Level-0 table #36: started
+2026/02/21-23:32:15.755 aa4663 Level-0 table #36: 12883 bytes OK
+2026/02/21-23:32:15.763 aa4663 Delete type=0 #32
+2026/02/22-01:22:18.647 aa4663 Level-0 table #38: started
+2026/02/22-01:22:18.656 aa4663 Level-0 table #38: 13225 bytes OK
+2026/02/22-01:22:18.663 aa4663 Delete type=0 #35

@@ -1,0 +1,24 @@
+2026/02/21-22:21:16.324 aa4666 Reusing MANIFEST /Users/macbook/Downloads/Library/PROJECTS/SPINaBOT/Whatsapp-agent/.wwebjs_auth/session-hospital-bot/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/02/21-22:21:16.325 aa4666 Recovering log #86
+2026/02/21-22:21:16.329 aa4666 Reusing old log /Users/macbook/Downloads/Library/PROJECTS/SPINaBOT/Whatsapp-agent/.wwebjs_auth/session-hospital-bot/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/000086.log 
+2026/02/21-22:29:34.612 aa4662 Level-0 table #92: started
+2026/02/21-22:29:34.635 aa4662 Level-0 table #92: 1307595 bytes OK
+2026/02/21-22:29:34.639 aa4662 Delete type=0 #86
+2026/02/21-22:29:35.250 aa4663 Compacting 1@1 + 2@2 files
+2026/02/21-22:29:35.302 aa4663 Generated table #93@1: 75882 keys, 2302255 bytes
+2026/02/21-22:29:35.352 aa4663 Generated table #94@1: 93325 keys, 2249903 bytes
+2026/02/21-22:29:35.356 aa4663 Generated table #95@1: 3591 keys, 134855 bytes
+2026/02/21-22:29:35.356 aa4663 Compacted 1@1 + 2@2 files => 4687013 bytes
+2026/02/21-22:29:35.360 aa4663 compacted to: files[ 0 0 3 0 0 0 0 ]
+2026/02/21-22:29:35.361 aa4663 Delete type=2 #89
+2026/02/21-22:29:35.361 aa4663 Delete type=2 #88
+2026/02/21-22:29:35.361 aa4663 Delete type=2 #92
+2026/02/21-22:35:30.832 aa4663 Level-0 table #97: started
+2026/02/21-22:35:30.851 aa4663 Level-0 table #97: 1336140 bytes OK
+2026/02/21-22:35:30.858 aa4663 Delete type=0 #91
+2026/02/21-22:35:31.085 aa4663 Compacting 1@1 + 3@2 files
+2026/02/21-22:35:31.142 aa4663 Generated table #98@1: 78962 keys, 2292317 bytes
+2026/02/21-22:35:31.197 aa4663 Generated table #99@1: 97042 keys, 2272694 bytes
+2026/02/21-22:35:31.200 aa4663 Generated table #100@1: 1597 keys, 86909 bytes
+2026/02/21-22:35:31.200 aa4663 Compacted 1@1 + 3@2 files => 4651920 bytes
+2026/02/21-22:35:31.204 aa4663 compacted to: files[ 0 0 3 0 0 0 0 ]
