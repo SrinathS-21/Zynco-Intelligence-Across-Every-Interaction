@@ -192,6 +192,40 @@ interface DashboardOverviewPayload {
   }>;
 }
 
+type InsightPriority = "high" | "medium" | "low";
+
+interface DashboardInsightItem {
+  title: string;
+  detail: string;
+  priority: InsightPriority;
+}
+
+interface DashboardInsightsPayload {
+  generatedAt: string;
+  aiUsed: boolean;
+  metrics: {
+    signalScore: number;
+    totalEvents24h: number;
+    failedEvents24h: number;
+    outboundRate24h: number;
+    connectionCoverage: number;
+    unreadEmails: number;
+    highPriorityEmails: number;
+    topChannel: string;
+    topChannelVolume: number;
+    activeAutomations7d: number;
+    responseMomentum: number;
+    channelVolumes24h: Record<string, number>;
+  };
+  insights: {
+    headline: string;
+    summary: string;
+    anomalies: DashboardInsightItem[];
+    suggestions: DashboardInsightItem[];
+    improvements: DashboardInsightItem[];
+  };
+}
+
 interface JiraProject {
   id: string;
   key: string;
@@ -1930,38 +1964,200 @@ function TwitterHoldingView() {
   );
 }
 
-function InsightsView() {
+function InsightsView({
+  insights,
+  loading,
+  error,
+  onRefresh,
+}: {
+  insights: DashboardInsightsPayload | null;
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+}) {
+  const metrics = insights?.metrics;
+  const payload = insights?.insights;
+
+  const sourceBars = useMemo(() => {
+    const entries = Object.entries(metrics?.channelVolumes24h || {});
+    const max = entries.reduce((acc, [, value]) => Math.max(acc, value), 1);
+    return entries
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, value]) => ({
+        name,
+        value,
+        width: Math.max(10, Math.round((value / max) * 100)),
+      }));
+  }, [metrics]);
+
+  const toLabel = (value: string) => {
+    if (!value) return "-";
+    return value
+      .split(/[_\s-]+/)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  };
+
+  const priorityClass = (priority: InsightPriority) => {
+    if (priority === "high") return "bg-red-100 text-red-700";
+    if (priority === "low") return "bg-slate-200 text-slate-700";
+    return "bg-amber-100 text-amber-700";
+  };
+
+  if (loading && !insights) {
+    return (
+      <Card className="border-slate-200 bg-white">
+        <CardContent className="flex items-center gap-2 p-6 text-sm text-slate-500">
+          <Loader2 className="h-4 w-4 animate-spin" /> Building AI insights from live data...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error && !insights) {
+    return (
+      <Card className="border-red-200 bg-red-50">
+        <CardContent className="space-y-3 p-6 text-sm text-red-700">
+          <p>{error}</p>
+          <Button variant="outline" className="border-red-300 bg-white" onClick={onRefresh}>Retry</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card className="border-slate-200 bg-white">
           <CardHeader>
-            <CardTitle className="text-sm uppercase tracking-wide text-slate-500">Status Report</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-wide text-slate-500">Signal Score</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-semibold">84.2</p>
-            <p className="mt-1 text-xs text-blue-600">+2.4% this week</p>
+            <p className="text-4xl font-semibold">{metrics?.signalScore ?? 0}</p>
+            <p className="mt-1 text-xs text-blue-600">{insights?.aiUsed ? "AI-calibrated" : "Heuristic mode"}</p>
           </CardContent>
         </Card>
         <Card className="border-slate-200 bg-white">
           <CardHeader>
-            <CardTitle className="text-sm uppercase tracking-wide text-slate-500">Total Volume</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-wide text-slate-500">Events (24h)</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-semibold">1.2M</p>
-            <p className="mt-1 text-xs text-slate-500">Real-time</p>
+            <p className="text-4xl font-semibold">{metrics?.totalEvents24h ?? 0}</p>
+            <p className="mt-1 text-xs text-slate-500">Top channel: {toLabel(metrics?.topChannel || "none")}</p>
           </CardContent>
         </Card>
         <Card className="border-slate-200 bg-white">
           <CardHeader>
-            <CardTitle className="text-sm uppercase tracking-wide text-slate-500">AI Agents</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-wide text-slate-500">Outbound Ratio</CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Active</Badge>
-            <p className="mt-3 text-sm text-slate-600">Classifier, Trend Analyzer, Response Synth are processing streams.</p>
+            <p className="text-4xl font-semibold">{metrics?.outboundRate24h ?? 0}%</p>
+            <p className="mt-1 text-xs text-slate-500">Failed events: {metrics?.failedEvents24h ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200 bg-white">
+          <CardHeader>
+            <CardTitle className="text-sm uppercase tracking-wide text-slate-500">Coverage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-semibold">{Math.round((metrics?.connectionCoverage || 0) * 100)}%</p>
+            <p className="mt-1 text-xs text-slate-500">Unread emails: {metrics?.unreadEmails ?? 0}</p>
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-slate-200 bg-white">
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-base">AI Executive Insight</CardTitle>
+            <p className="mt-1 text-xs text-slate-500">Generated {formatRelativeTime(insights?.generatedAt || null)}</p>
+          </div>
+          <Button variant="outline" size="sm" className="border-slate-300" onClick={onRefresh}>
+            <RefreshCw className={cn("mr-1 h-4 w-4", loading ? "animate-spin" : "")} />
+            Refresh Insights
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-lg font-semibold text-slate-900">{payload?.headline || "Live insight unavailable"}</p>
+          <p className="text-sm text-slate-600">{payload?.summary || "No summary generated yet."}</p>
+          {error && <p className="text-xs text-amber-600">{error}</p>}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="border-slate-200 bg-white">
+          <CardHeader>
+            <CardTitle className="text-base">Anomalies</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(payload?.anomalies || []).map((item, index) => (
+              <div key={`${item.title}-${index}`} className="rounded-lg border border-slate-200 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                  <Badge className={priorityClass(item.priority)}>{item.priority}</Badge>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">{item.detail}</p>
+              </div>
+            ))}
+            {(payload?.anomalies || []).length === 0 && <p className="text-sm text-slate-500">No anomalies detected.</p>}
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 bg-white">
+          <CardHeader>
+            <CardTitle className="text-base">Suggestions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(payload?.suggestions || []).map((item, index) => (
+              <div key={`${item.title}-${index}`} className="rounded-lg border border-slate-200 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                  <Badge className={priorityClass(item.priority)}>{item.priority}</Badge>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">{item.detail}</p>
+              </div>
+            ))}
+            {(payload?.suggestions || []).length === 0 && <p className="text-sm text-slate-500">No suggestions yet.</p>}
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 bg-white">
+          <CardHeader>
+            <CardTitle className="text-base">Improvements</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(payload?.improvements || []).map((item, index) => (
+              <div key={`${item.title}-${index}`} className="rounded-lg border border-slate-200 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                  <Badge className={priorityClass(item.priority)}>{item.priority}</Badge>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">{item.detail}</p>
+              </div>
+            ))}
+            {(payload?.improvements || []).length === 0 && <p className="text-sm text-slate-500">No improvements listed.</p>}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-slate-200 bg-white">
+        <CardHeader>
+          <CardTitle className="text-base">Channel Pulse (24h)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {sourceBars.map((bar) => (
+            <div key={bar.name} className="flex items-center gap-3">
+              <div className="w-24 text-xs font-medium uppercase tracking-wide text-slate-500">{toLabel(bar.name)}</div>
+              <div className="h-2.5 flex-1 rounded-full bg-slate-200">
+                <div className="h-2.5 rounded-full bg-linear-to-r from-blue-600 to-sky-400" style={{ width: `${bar.width}%` }} />
+              </div>
+              <div className="w-10 text-right text-xs text-slate-600">{bar.value}</div>
+            </div>
+          ))}
+          {sourceBars.length === 0 && <p className="text-sm text-slate-500">No channel activity in this window.</p>}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1991,6 +2187,9 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
   const [dashboardOverview, setDashboardOverview] = useState<DashboardOverviewPayload | null>(null);
   const [isOverviewLoading, setIsOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
+  const [dashboardInsights, setDashboardInsights] = useState<DashboardInsightsPayload | null>(null);
+  const [isInsightsLoading, setIsInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
 
   const [channelState, setChannelState] = useState<Record<SocialChannel, ChannelState>>({
     instagram: defaultChannelState(),
@@ -2037,6 +2236,23 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
     }
   };
 
+  const fetchDashboardInsights = async () => {
+    setIsInsightsLoading(true);
+    setInsightsError(null);
+    try {
+      const response = await fetch(`/api/dashboard/insights?ts=${Date.now()}`, { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(readValue(payload?.error, "Failed to load insights"));
+      }
+      setDashboardInsights(payload as DashboardInsightsPayload);
+    } catch (error) {
+      setInsightsError(error instanceof Error ? error.message : "Failed to load insights");
+    } finally {
+      setIsInsightsLoading(false);
+    }
+  };
+
   const fetchJiraProjects = async () => {
     if (!agentId) return;
 
@@ -2064,7 +2280,20 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
 
   useEffect(() => {
     void fetchDashboardOverview();
+    void fetchDashboardInsights();
   }, []);
+
+  useEffect(() => {
+    if (activeSection !== "insights") return;
+
+    void fetchDashboardInsights();
+
+    const intervalId = window.setInterval(() => {
+      void fetchDashboardInsights();
+    }, 45000);
+
+    return () => window.clearInterval(intervalId);
+  }, [activeSection]);
 
   useEffect(() => {
     async function loadSocialConnections() {
@@ -2090,6 +2319,7 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
       } finally {
         setIsConnectionsLoading(false);
         void fetchDashboardOverview();
+        void fetchDashboardInsights();
       }
     }
 
@@ -2109,6 +2339,7 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
         if (res.ok && data?.agent?.id) {
           setAgentId(String(data.agent.id));
           void fetchDashboardOverview();
+          void fetchDashboardInsights();
         }
       } catch (error) {
         console.error("Failed to initialize Gmail agent", error);
@@ -2478,6 +2709,7 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
           toast.success(`${channelLabel(channel)} connected successfully`);
           await fetchChannelData(channel);
           await fetchDashboardOverview();
+          await fetchDashboardInsights();
         } catch (error) {
           setConnectDialogChannel(channel);
           toast.error(error instanceof Error ? error.message : "Connected, but failed to save account details");
@@ -2572,6 +2804,7 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
       handleCloseConnectDialog();
       await fetchChannelData(connectDialogChannel);
       await fetchDashboardOverview();
+      await fetchDashboardInsights();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save connection");
     }
@@ -2601,6 +2834,7 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
       toast.success("Disconnected successfully");
       handleCloseConnectDialog();
       await fetchDashboardOverview();
+      await fetchDashboardInsights();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Disconnect failed");
     }
@@ -2651,6 +2885,7 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
       updateChannelState(channel, { postText: "", mediaUrl: "", mediaFiles: [] });
       await fetchChannelData(channel);
       await fetchDashboardOverview();
+      await fetchDashboardInsights();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Publish failed");
     }
@@ -2710,6 +2945,7 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
       updateChannelState(channel, { messageRecipient: resolvedRecipient, messageText: "" });
       await fetchChannelData(channel);
       await fetchDashboardOverview();
+      await fetchDashboardInsights();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to send message");
     }
@@ -2799,7 +3035,16 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
         />
       );
     }
-    if (activeSection === "insights") return <InsightsView />;
+    if (activeSection === "insights") {
+      return (
+        <InsightsView
+          insights={dashboardInsights}
+          loading={isInsightsLoading}
+          error={insightsError}
+          onRefresh={() => void fetchDashboardInsights()}
+        />
+      );
+    }
     if (activeSection === "network") return <NetworkView overview={dashboardOverview} onJump={setActiveSection} />;
     if (activeSection === "updates") return <UpdatesView overview={dashboardOverview} />;
 

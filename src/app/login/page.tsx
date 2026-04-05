@@ -31,15 +31,27 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const response = await fetch("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
-            });
+            let response: Response;
+            try {
+                response = await fetch("/api/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password }),
+                });
+            } catch {
+                setError("Unable to reach the server. Please restart dev server and try again.");
+                return;
+            }
 
-            const data = await response.json();
+            let data: { error?: string } = {};
+            try {
+                data = await response.json();
+            } catch {
+                // Ignore parse errors so we can still show a fallback status message.
+            }
+
             if (!response.ok) {
-                setError(data.error || "Login failed");
+                setError(data.error || `Login failed (${response.status})`);
                 return;
             }
 

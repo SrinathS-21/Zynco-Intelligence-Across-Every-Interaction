@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
-    "dev:clean": "rm -rf .next .next-work && next dev -p 3000",
-    "dev:stable": "rm -rf .next .next-work && next dev -p 3000 --turbopack",
+    "dev": "NEXT_DISABLE_WEBPACK_CACHE=1 next dev -p 3000",
+    "dev:clean": "rm -rf .next .next-dev .next-work && NEXT_DISABLE_WEBPACK_CACHE=1 next dev -p 3000",
+    "dev:stable": "rm -rf .next .next-dev .next-work && next dev -p 3000 --turbopack",
     "build": "next build",
     "start": "next start -p 3000",
     "prisma:generate": "prisma generate",
