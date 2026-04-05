@@ -146,6 +146,7 @@ The codebase references a broad set of optional variables. You only need a subse
 - LinkedIn: `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_ACCESS_TOKEN`
 - Twitter/X: `RAPIDAPI_KEY` or `TWITTER154_API_KEY`
 - Instagram: `AYRSHARE_API_KEY`
+- Unipile (cross-channel inbox/comments/posting): `UNIPILE_TOKEN`, `UNIPILE_DSN`
 - Slack: `NEXT_PUBLIC_SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_CLIENT_ID`
 - Notion: `NOTION_CLIENT_ID`, `NOTION_CLIENT_SECRET`
 - Jira: `JIRA_CLIENT_ID`, `JIRA_CLIENT_SECRET`

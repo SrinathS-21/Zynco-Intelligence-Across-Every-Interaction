@@ -6,6 +6,46 @@ export type ActivityType =
   | "automation"
   | "spam_rescue";
 
+export type SocialChannel = "instagram" | "linkedin" | "twitter";
+
+export interface SocialConnectionState {
+  accountId?: string;
+  connectedAt?: string | null;
+  disconnectedAt?: string | null;
+  status?: "connected" | "disconnected";
+}
+
+export interface DashboardMetricsSnapshot {
+  connectedChannels: number;
+  totalChannels: number;
+  connections: {
+    gmail: boolean;
+    instagram: boolean;
+    linkedin: boolean;
+    twitter: boolean;
+    jira: boolean;
+  };
+  activity: {
+    totalUpdates: number;
+    failedUpdates: number;
+    pendingUpdates: number;
+    outboundRate: number;
+    outboundCount: number;
+    inboundCount: number;
+  };
+  email: {
+    totalEmails: number;
+    unreadEmails: number;
+    highPriorityEmails: number;
+  };
+  social: {
+    instagramRecipients: number;
+    linkedinRecipients: number;
+    twitterRecipients: number;
+  };
+  updatedAt: string;
+}
+
 export interface ActivityLog {
   id: string;
   type: ActivityType;
@@ -76,6 +116,9 @@ export interface AgentConfig {
   };
   jiraProjectKey?: string;
   autoCreateJiraTasks?: boolean;
+  socialConnections?: Partial<Record<SocialChannel, SocialConnectionState>>;
+  directMessageRecipients?: Partial<Record<SocialChannel, string[]>>;
+  socialOnboardingCompleted?: boolean;
 }
 
 export interface StoredEmail {
@@ -110,4 +153,5 @@ export interface AgentData {
     categories: Record<string, number>;
     newInLastSync?: number;
   };
+  dashboardMetrics?: DashboardMetricsSnapshot;
 }
