@@ -1,62 +1,8 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
-const UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads");
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
-
-const MIME_BY_EXTENSION: Record<string, string> = {
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".png": "image/png",
-    ".gif": "image/gif",
-    ".webp": "image/webp",
-    ".bmp": "image/bmp",
-    ".svg": "image/svg+xml",
-    ".avif": "image/avif",
-};
-
-function sanitizeBaseName(input: string) {
-    const base = input
-        .replace(/\.[^/.]+$/, "")
-        .toLowerCase()
-        .replace(/[^a-z0-9-_]+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-
-    return base || "image";
-}
-
-function normalizeExtension(fileName: string, mimeType: string) {
-    const extFromName = path.extname(fileName || "").toLowerCase();
-    if (MIME_BY_EXTENSION[extFromName]) {
-        return extFromName;
-    }
-
-    const byMime = Object.entries(MIME_BY_EXTENSION).find(([, mime]) => mime === mimeType)?.[0];
-    return byMime || ".png";
-}
-
-function inferMimeType(fileName: string) {
-    return MIME_BY_EXTENSION[path.extname(fileName).toLowerCase()] || "image/*";
-}
-
-function toPublicUrl(userId: string, fileName: string) {
-    return `/uploads/${encodeURIComponent(userId)}/${encodeURIComponent(fileName)}`;
-}
-
-function userDirectory(userId: string) {
-    return path.join(UPLOADS_ROOT, userId);
-}
-
-function toCreatedAt(stats: { birthtime: Date; mtime: Date }) {
-    const primary = stats.birthtime instanceof Date && Number.isFinite(stats.birthtime.getTime())
-        ? stats.birthtime
-        : stats.mtime;
-    return primary.toISOString();
-}
 
 type UploadAsset = {
     id: string;
@@ -67,34 +13,89 @@ type UploadAsset = {
     createdAt: string;
 };
 
-async function listUserAssets(userId: string): Promise<UploadAsset[]> {
-    const dir = userDirectory(userId);
-    await mkdir(dir, { recursive: true });
+type UploadedAssetRecord = {
+    id: string;
+    name: string;
+    size: number;
+    mimeType: string;
+    createdAt: Date;
+};
 
-    const entries = await readdir(dir, { withFileTypes: true });
-    const files = entries.filter((entry) => entry.isFile());
+type UploadedAssetDelegate = {
+    findMany(args: {
+        where: { userId: string };
+        orderBy: { createdAt: "desc" };
+        select: {
+            id: true;
+            name: true;
+            size: true;
+            mimeType: true;
+            createdAt: true;
+        };
+    }): Promise<UploadedAssetRecord[]>;
+    create(args: {
+        data: {
+            userId: string;
+            name: string;
+            mimeType: string;
+            size: number;
+            data: Buffer;
+        };
+        select: {
+            id: true;
+            name: true;
+            size: true;
+            mimeType: true;
+            createdAt: true;
+        };
+    }): Promise<UploadedAssetRecord>;
+    deleteMany(args: {
+        where: {
+            id: string;
+            userId: string;
+        };
+    }): Promise<{ count: number }>;
+};
 
-    const assets = await Promise.all(files.map(async (file) => {
-        const fullPath = path.join(dir, file.name);
-        const info = await stat(fullPath);
+function getUploadedAssetDelegate(): UploadedAssetDelegate {
+    return (prisma as unknown as { uploadedAsset: UploadedAssetDelegate }).uploadedAsset;
+}
 
-        return {
-            id: file.name,
-            name: file.name,
-            url: toPublicUrl(userId, file.name),
-            size: info.size,
-            mimeType: inferMimeType(file.name),
-            createdAt: toCreatedAt({ birthtime: info.birthtime, mtime: info.mtime }),
-        } satisfies UploadAsset;
-    }));
-
-    return assets.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+function toUploadAsset(item: {
+    id: string;
+    name: string;
+    size: number;
+    mimeType: string;
+    createdAt: Date;
+}): UploadAsset {
+    return {
+        id: item.id,
+        name: item.name,
+        url: `/api/uploads/${encodeURIComponent(item.id)}`,
+        size: item.size,
+        mimeType: item.mimeType,
+        createdAt: item.createdAt.toISOString(),
+    };
 }
 
 export async function GET(request: NextRequest) {
     try {
         const user = await requireUser(request);
-        const items = await listUserAssets(user.id);
+        const uploadedAsset = getUploadedAssetDelegate();
+
+        const records = await uploadedAsset.findMany({
+            where: { userId: user.id },
+            orderBy: { createdAt: "desc" },
+            select: {
+                id: true,
+                name: true,
+                size: true,
+                mimeType: true,
+                createdAt: true,
+            },
+        });
+
+        const items = records.map((record: UploadedAssetRecord) => toUploadAsset(record));
         return NextResponse.json({ success: true, items });
     } catch (error) {
         if (error instanceof Error && error.message === "Unauthorized") {
@@ -108,6 +109,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const user = await requireUser(request);
+        const uploadedAsset = getUploadedAssetDelegate();
         const formData = await request.formData();
 
         const candidates = [...formData.getAll("files"), ...formData.getAll("file")];
@@ -116,9 +118,6 @@ export async function POST(request: NextRequest) {
         if (files.length === 0) {
             return NextResponse.json({ error: "No image files were provided" }, { status: 400 });
         }
-
-        const dir = userDirectory(user.id);
-        await mkdir(dir, { recursive: true });
 
         const uploadedItems: UploadAsset[] = [];
 
@@ -132,22 +131,26 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: `File too large: ${file.name}. Max size is 15 MB.` }, { status: 400 });
             }
 
-            const extension = normalizeExtension(file.name, mimeType);
-            const safeName = `${Date.now()}-${randomUUID().slice(0, 8)}-${sanitizeBaseName(file.name)}${extension}`;
-            const fullPath = path.join(dir, safeName);
-
             const bytes = Buffer.from(await file.arrayBuffer());
-            await writeFile(fullPath, bytes);
 
-            const info = await stat(fullPath);
-            uploadedItems.push({
-                id: safeName,
-                name: file.name,
-                url: toPublicUrl(user.id, safeName),
-                size: info.size,
-                mimeType: mimeType || inferMimeType(safeName),
-                createdAt: toCreatedAt({ birthtime: info.birthtime, mtime: info.mtime }),
+            const created = await uploadedAsset.create({
+                data: {
+                    userId: user.id,
+                    name: file.name,
+                    mimeType: mimeType || "image/*",
+                    size: file.size,
+                    data: bytes,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    size: true,
+                    mimeType: true,
+                    createdAt: true,
+                },
             });
+
+            uploadedItems.push(toUploadAsset(created));
         }
 
         return NextResponse.json({ success: true, items: uploadedItems });
@@ -163,15 +166,23 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
     try {
         const user = await requireUser(request);
+        const uploadedAsset = getUploadedAssetDelegate();
         const id = request.nextUrl.searchParams.get("id") || "";
-        const safeId = path.basename(id);
 
-        if (!safeId || safeId !== id) {
+        if (!id.trim()) {
             return NextResponse.json({ error: "Invalid upload id" }, { status: 400 });
         }
 
-        const fullPath = path.join(userDirectory(user.id), safeId);
-        await unlink(fullPath);
+        const deleted = await uploadedAsset.deleteMany({
+            where: {
+                id: id.trim(),
+                userId: user.id,
+            },
+        });
+
+        if (deleted.count === 0) {
+            return NextResponse.json({ error: "Upload not found" }, { status: 404 });
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {

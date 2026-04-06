@@ -1,5 +1,5 @@
-import OnboardingView from "@/features/onboarding/OnboardingView";
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Zynco | Connection Hub",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <OnboardingView />;
+  redirect("/dashboard/unified");
 }

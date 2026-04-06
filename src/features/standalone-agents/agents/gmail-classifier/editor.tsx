@@ -116,6 +116,7 @@ export default function EmailClassifierEditor(props: StandaloneAgentEditorProps)
         const hasCompletedOnboarding = config.onboardingComplete === true;
         const hasRealToken = connectionStates.gmail;
         const hasCrmCredential = connectionStates.dynamics_crm;
+        const hasOAuthCallback = justConnected || jiraConnected || notionConnected || slackConnected || crmConnected;
 
         let initialStep = 6; // Default: Setup Dashboard
         let showOnboarding = true;
@@ -130,10 +131,16 @@ export default function EmailClassifierEditor(props: StandaloneAgentEditorProps)
             if (slackConnected) setTimeout(() => toast.success("Slack connected successfully!"), 100);
             if (crmConnected) setTimeout(() => toast.success("Dynamics CRM connected successfully!"), 100);
             if (justConnected) setTimeout(() => toast.success("Gmail reconnected successfully!"), 100);
-        } else if (justConnected) {
-            initialStep = 2;
-        } else if (jiraConnected || notionConnected || slackConnected || crmConnected) {
-            initialStep = 3;
+        } else if (hasOAuthCallback) {
+            // After any OAuth callback, stay on dashboard instead of entering onboarding flow.
+            initialStep = 6;
+            showOnboarding = false;
+
+            if (jiraConnected) setTimeout(() => toast.success("Jira connected successfully!"), 100);
+            if (notionConnected) setTimeout(() => toast.success("Notion connected successfully!"), 100);
+            if (slackConnected) setTimeout(() => toast.success("Slack connected successfully!"), 100);
+            if (crmConnected) setTimeout(() => toast.success("Dynamics CRM connected successfully!"), 100);
+            if (justConnected) setTimeout(() => toast.success("Gmail connected successfully!"), 100);
         } else if (!hasRealToken) {
             initialStep = 1;
         } else if (!hasCompletedTools) {
@@ -162,7 +169,7 @@ export default function EmailClassifierEditor(props: StandaloneAgentEditorProps)
         }));
 
         // Clean up URL parameters
-        if (justConnected || jiraConnected || notionConnected || slackConnected || crmConnected) {
+        if (hasOAuthCallback) {
             window.history.replaceState({}, '', window.location.pathname);
         }
 

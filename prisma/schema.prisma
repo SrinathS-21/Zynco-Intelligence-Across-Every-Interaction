@@ -16,6 +16,7 @@ model User {
   updatedAt    DateTime  @updatedAt
   sessions     Session[]
   agents       Agent[]
+  uploads      UploadedAsset[]
 }
 
 model Session {
@@ -72,4 +73,18 @@ model UnifiedMessage {
   metadata     Json?     @default("{}")
 
   @@index([userId, platform, contactId, timestamp])
+}
+
+model UploadedAsset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  mimeType  String
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
 }

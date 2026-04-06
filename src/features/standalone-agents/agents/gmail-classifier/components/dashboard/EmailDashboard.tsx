@@ -633,7 +633,9 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                     return;
                                 }
                                 if (item.id === 'onboarding') {
-                                    window.location.href = "/onboarding";
+                                    setSelectedFolder('settings');
+                                    setSettingsInitialTab('integrations');
+                                    setSettingsOpen(true);
                                     return;
                                 }
                                 setSelectedFolder(item.id);
