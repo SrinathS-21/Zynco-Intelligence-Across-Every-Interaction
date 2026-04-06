@@ -10,6 +10,15 @@ export type SocialChannel = "instagram" | "linkedin" | "twitter";
 
 export interface SocialConnectionState {
   accountId?: string;
+  username?: string;
+  displayName?: string;
+  avatarUrl?: string | null;
+  externalUserId?: string;
+  oauthAccessToken?: string;
+  oauthRefreshToken?: string;
+  oauthTokenType?: string;
+  oauthScope?: string;
+  oauthExpiresAt?: string | null;
   connectedAt?: string | null;
   disconnectedAt?: string | null;
   status?: "connected" | "disconnected";

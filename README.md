@@ -238,6 +238,8 @@ Request body:
 ```json
 {
 	"message": "Summarize my WhatsApp activity",
+	"source": "whatsapp",
+	"context": "Optional queue summary/context to ground the answer",
 	"history": [
 		{ "role": "user", "content": "..." },
 		{ "role": "assistant", "content": "..." }
@@ -250,11 +252,19 @@ Response:
 ```json
 {
 	"reply": "...",
-	"source": "model"
+	"source": "groq",
+	"model": "llama-3.3-70b-versatile",
+	"configured": true
 }
 ```
 
 If model credentials are unavailable, route returns a deterministic fallback response.
+
+Optional env vars for chat:
+
+- `GROQ_API_KEY` (required for model calls)
+- `GROQ_MODEL` (optional model override)
+- `GROQ_BASE_URL` (optional proxy or custom Groq-compatible endpoint)
 
 ### `POST /api/ai/draft`
 

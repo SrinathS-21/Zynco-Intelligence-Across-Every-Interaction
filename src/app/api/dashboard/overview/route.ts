@@ -41,11 +41,24 @@ function readMetadata(metadata: unknown) {
 }
 
 function sourceFromPlatform(platform: string): DashboardUpdate["source"] {
-  const normalized = platform.toLowerCase();
+  const normalized = platform.toLowerCase().trim();
+  if (normalized === "email" || normalized === "gmail") return "email";
   if (normalized === "instagram") return "instagram";
   if (normalized === "linkedin") return "linkedin";
-  if (normalized === "twitter") return "twitter";
+  if (normalized === "twitter" || normalized === "x") return "twitter";
   if (normalized === "whatsapp") return "whatsapp";
+  return "automation";
+}
+
+function sourceFromActivityLog(log: Record<string, unknown>): DashboardUpdate["source"] {
+  const haystack = `${String(log.type || "")} ${String(log.action || "")} ${String(log.details || "")} ${String(log.platform || "")}`.toLowerCase();
+
+  if (/(gmail|email|inbox)/.test(haystack)) return "email";
+  if (/instagram/.test(haystack)) return "instagram";
+  if (/linkedin/.test(haystack)) return "linkedin";
+  if (/(twitter|\bx\b)/.test(haystack)) return "twitter";
+  if (/whatsapp/.test(haystack)) return "whatsapp";
+
   return "automation";
 }
 
@@ -53,6 +66,22 @@ function titleForMessage(platform: string, direction: string) {
   const platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1);
   if (direction === "OUTBOUND") return `${platformLabel} update published`;
   return `${platformLabel} conversation updated`;
+}
+
+function parseIsoDateOrNow(value: unknown) {
+  const raw = String(value || "").trim();
+  const parsed = raw ? new Date(raw) : null;
+  if (parsed && !Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  return new Date().toISOString();
+}
+
+function normalizeSender(value: unknown) {
+  const from = String(value || "").trim();
+  if (!from) return "Unknown sender";
+
+  const match = from.match(/^\s*([^<]+)\s*<[^>]+>\s*$/);
+  if (match?.[1]) return match[1].trim();
+  return from;
 }
 
 function buildMetricsSnapshot(params: {
@@ -123,6 +152,13 @@ export async function GET(request: NextRequest) {
 
     const socialConnections = config.socialConnections || {};
     const directRecipients = config.directMessageRecipients || {};
+    const twitterConnection = socialConnections.twitter || {};
+    const twitterTokenPresent = Boolean(twitterConnection.oauthAccessToken || twitterConnection.oauthRefreshToken);
+    const twitterConnected = Boolean(
+      twitterConnection.accountId
+      && twitterTokenPresent
+      && twitterConnection.status !== "disconnected",
+    );
 
     const emails = Array.isArray(data.emails) ? data.emails : [];
     const unreadEmails = emails.filter((email) => !Boolean(email?.isRead ?? email?.read)).length;
@@ -158,18 +194,42 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const emailAndAutomationUpdates: DashboardUpdate[] = activityLogs.map((log) => ({
-      id: String(log.id || `log_${Math.random().toString(36).slice(2, 8)}`),
-      source: log.type === "connection" || log.type === "sync" ? "email" : "automation",
-      platform: log.type,
-      title: String(log.action || "Activity"),
-      description: String(log.details || ""),
-      timestamp: String(log.timestamp || new Date().toISOString()),
-      status: normalizeStatus(log.status),
-      kind: "activity",
-    }));
+    const emailInboxUpdates: DashboardUpdate[] = emails
+      .slice(0, 180)
+      .map((email) => {
+        const isUnread = !Boolean(email?.isRead ?? email?.read);
+        const priority = String(email?.priority || "").toLowerCase();
 
-    const updates = [...messageUpdates, ...emailAndAutomationUpdates]
+        return {
+          id: `email_${String(email?.id || Math.random().toString(36).slice(2, 10))}`,
+          source: "email",
+          platform: "gmail",
+          title: String(email?.subject || "(No subject)"),
+          description: String(email?.snippet || email?.body || "No preview available").slice(0, 220),
+          timestamp: parseIsoDateOrNow(email?.date),
+          status: isUnread || priority === "high" || priority === "critical" ? "pending" : "success",
+          kind: "message",
+          direction: "INBOUND",
+          contactName: normalizeSender(email?.from),
+        };
+      });
+
+    const emailAndAutomationUpdates: DashboardUpdate[] = activityLogs.map((log) => {
+      const normalizedLog = (log && typeof log === "object") ? (log as unknown as Record<string, unknown>) : {};
+
+      return {
+        id: String(normalizedLog.id || `log_${Math.random().toString(36).slice(2, 8)}`),
+        source: sourceFromActivityLog(normalizedLog),
+        platform: String(normalizedLog.type || normalizedLog.platform || "activity"),
+        title: String(normalizedLog.action || "Activity"),
+        description: String(normalizedLog.details || ""),
+        timestamp: String(normalizedLog.timestamp || new Date().toISOString()),
+        status: normalizeStatus(normalizedLog.status),
+        kind: "activity",
+      };
+    });
+
+    const updates = [...emailInboxUpdates, ...messageUpdates, ...emailAndAutomationUpdates]
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 220);
 
@@ -195,7 +255,7 @@ export async function GET(request: NextRequest) {
         gmail: Boolean(config.accessToken),
         instagram: Boolean(socialConnections.instagram?.accountId),
         linkedin: Boolean(socialConnections.linkedin?.accountId),
-        twitter: Boolean(socialConnections.twitter?.accountId),
+        twitter: twitterConnected,
         jira: Boolean(config.jira?.accessToken),
       },
       socialAccounts: {
@@ -205,14 +265,29 @@ export async function GET(request: NextRequest) {
       },
       connectionMeta: {
         instagram: {
+          accountId: socialConnections.instagram?.accountId || null,
+          username: socialConnections.instagram?.username || null,
+          displayName: socialConnections.instagram?.displayName || null,
+          avatarUrl: socialConnections.instagram?.avatarUrl || null,
+          externalUserId: socialConnections.instagram?.externalUserId || null,
           connectedAt: socialConnections.instagram?.connectedAt || null,
           status: socialConnections.instagram?.status || "disconnected",
         },
         linkedin: {
+          accountId: socialConnections.linkedin?.accountId || null,
+          username: socialConnections.linkedin?.username || null,
+          displayName: socialConnections.linkedin?.displayName || null,
+          avatarUrl: socialConnections.linkedin?.avatarUrl || null,
+          externalUserId: socialConnections.linkedin?.externalUserId || null,
           connectedAt: socialConnections.linkedin?.connectedAt || null,
           status: socialConnections.linkedin?.status || "disconnected",
         },
         twitter: {
+          accountId: socialConnections.twitter?.accountId || null,
+          username: socialConnections.twitter?.username || socialConnections.twitter?.accountId || null,
+          displayName: socialConnections.twitter?.displayName || null,
+          avatarUrl: socialConnections.twitter?.avatarUrl || null,
+          externalUserId: socialConnections.twitter?.externalUserId || null,
           connectedAt: socialConnections.twitter?.connectedAt || null,
           status: socialConnections.twitter?.status || "disconnected",
         },

@@ -54,12 +54,12 @@ export function SetupDashboard({
         <div className="w-full max-w-7xl mx-auto h-[calc(100vh-140px)] flex flex-col p-2 gap-2 relative">
 
             {/* Header */}
-            <div className="flex-none flex justify-between items-end pb-1 border-b border-border/40">
+            <div className="flex-none flex justify-between items-end pb-1 border-b border-slate-200">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Welcome, {userEmail.split('@')[0]}!</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">Setup Overview</p>
                 </div>
-                <div className="bg-card border border-border shadow-sm rounded-lg p-1.5 px-3 flex items-center gap-3">
+                <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50/35 p-1.5 px-3 shadow-sm">
                     <span className="text-xs font-medium text-muted-foreground">Complete</span>
                     <span className="text-sm font-bold text-foreground">3/3</span>
                     <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -71,43 +71,43 @@ export function SetupDashboard({
             {/* Row 1: Status Cards */}
             <div className="flex-none grid grid-cols-1 md:grid-cols-3 gap-2">
                 {/* Email */}
-                <div className="bg-card border border-border shadow-sm rounded-xl p-3 flex flex-col gap-2 transition-shadow hover:shadow-md">
+                <div className="flex flex-col gap-2 rounded-xl border border-blue-100 bg-white/95 p-3 shadow-sm transition-shadow hover:shadow-md">
                     <div className="flex justify-between items-center">
                         <div className="flex gap-2.5 items-center">
-                            <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-foreground">
+                            <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-1.5 text-blue-700">
                                 <Mail className="w-4 h-4" />
                             </div>
                             <span className="text-sm font-semibold">Email Setup</span>
                         </div>
                         <CheckCircle2 className="w-4 h-4 text-foreground" />
                     </div>
-                    <div className="bg-muted/30 rounded-lg p-2 text-xs font-medium text-foreground truncate border border-border/50">
+                    <div className="truncate rounded-lg border border-blue-100 bg-blue-50/40 p-2 text-xs font-medium text-slate-800">
                         {userEmail}
                     </div>
                 </div>
 
                 {/* Tools */}
-                <div className="bg-card border border-border shadow-sm rounded-xl p-3 flex flex-col gap-2 transition-shadow hover:shadow-md cursor-pointer" onClick={onManageTools}>
+                <div className="flex cursor-pointer flex-col gap-2 rounded-xl border border-violet-100 bg-white/95 p-3 shadow-sm transition-shadow hover:shadow-md" onClick={onManageTools}>
                     <div className="flex justify-between items-center">
                         <div className="flex gap-2.5 items-center">
-                            <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-foreground">
+                            <div className="rounded-lg border border-violet-100 bg-violet-50/60 p-1.5 text-violet-700">
                                 <Wrench className="w-4 h-4" />
                             </div>
                             <span className="text-sm font-semibold">Tools</span>
                         </div>
                         <CheckCircle2 className="w-4 h-4 text-foreground" />
                     </div>
-                    <div className="bg-muted/30 rounded-lg p-2 flex justify-between items-center text-xs font-medium text-foreground border border-border/50 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between rounded-lg border border-violet-100 bg-violet-50/35 p-2 text-xs font-medium text-slate-800 transition-colors hover:bg-violet-50/55">
                         <span>{connectedTools.length > 0 ? connectedTools[0] : "None"}</span>
                         <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
                 </div>
 
                 {/* AI Prefs */}
-                <div className="bg-card border border-border shadow-sm rounded-xl p-3 flex flex-col gap-2 transition-shadow hover:shadow-md">
+                <div className="flex flex-col gap-2 rounded-xl border border-emerald-100 bg-white/95 p-3 shadow-sm transition-shadow hover:shadow-md">
                     <div className="flex justify-between items-center">
                         <div className="flex gap-2.5 items-center">
-                            <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-foreground">
+                            <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-1.5 text-emerald-700">
                                 <Sparkles className="w-4 h-4" />
                             </div>
                             <span className="text-sm font-semibold">Preferences</span>
@@ -118,7 +118,7 @@ export function SetupDashboard({
                         variant="ghost"
                         size="sm"
                         onClick={onRetakeQuiz}
-                        className="h-[30px] justify-start px-2 bg-muted/30 border border-border/50 text-xs text-muted-foreground hover:text-foreground w-full"
+                        className="h-7.5 w-full justify-start border border-emerald-100 bg-emerald-50/35 px-2 text-xs text-emerald-700 hover:bg-emerald-50/55 hover:text-emerald-800"
                     >
                         <RefreshCcw className="w-3 h-3 mr-2" />
                         Retake
@@ -127,27 +127,27 @@ export function SetupDashboard({
             </div>
 
             {/* Row 2: Quick Actions */}
-            <div className="flex-none bg-card border border-border shadow-sm rounded-xl p-3 flex flex-col sm:flex-row items-center gap-3">
-                <div className="flex gap-2 items-center min-w-[120px] px-1 border-b sm:border-b-0 sm:border-r border-border/50 pb-2 sm:pb-0">
+            <div className="flex-none flex flex-col items-center gap-3 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-sm sm:flex-row">
+                <div className="flex min-w-30 items-center gap-2 border-b border-border/50 px-1 pb-2 sm:border-r sm:border-b-0 sm:pb-0">
                     <Zap className="w-4 h-4 text-foreground" />
                     <h3 className="text-sm font-semibold">Quick Actions</h3>
                 </div>
                 <div className="grid grid-cols-2 md:flex gap-2 w-full">
                     <button
                         onClick={onManageKnowledgeBase}
-                        className="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 border border-border/30 hover:border-border transition-all"
+                        className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50/55 p-2.5 transition-all hover:bg-slate-100/80 hover:border-slate-300"
                     >
                         <FileText className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Knowledge Base</span>
                     </button>
                     <button
                         onClick={onManageTools}
-                        className="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 border border-border/30 hover:border-border transition-all"
+                        className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50/55 p-2.5 transition-all hover:bg-slate-100/80 hover:border-slate-300"
                     >
                         <Wrench className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Manage Tools</span>
                     </button>
-                    <button className="hidden md:flex flex-1 items-center justify-center gap-2 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 border border-border/30 hover:border-border transition-all opacity-50 cursor-not-allowed">
+                    <button className="hidden md:flex flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50/55 p-2.5 opacity-50 transition-all hover:bg-slate-100/80 hover:border-slate-300">
                         <LayoutDashboard className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Analytics</span>
                     </button>
@@ -155,7 +155,7 @@ export function SetupDashboard({
             </div>
 
             {/* Row 3: Preferences */}
-            <div className="flex-none bg-card border border-border shadow-sm rounded-xl p-3 space-y-2">
+            <div className="flex-none space-y-2 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-sm">
                 <div className="flex gap-2 items-center px-1">
                     <Sparkles className="w-4 h-4 text-foreground" />
                     <h3 className="text-sm font-semibold">Preferences</h3>
@@ -168,7 +168,7 @@ export function SetupDashboard({
                         { l: "Time", v: preferences.responseTime },
                         { l: "Prio", v: preferences.primaryPriority },
                     ].map((pref, i) => (
-                        <div key={i} className="bg-muted/30 rounded-lg p-2 border border-border/30 text-center">
+                        <div key={i} className="rounded-lg border border-slate-200 bg-slate-50/55 p-2 text-center">
                             <p className="text-[10px] uppercase text-muted-foreground/70 mb-0.5 tracking-wider font-semibold">{pref.l}</p>
                             <p className="text-sm font-medium text-foreground truncate">{formatPref(pref.v)}</p>
                         </div>
@@ -177,11 +177,11 @@ export function SetupDashboard({
             </div>
 
             {/* Row 4: Launch Hero - Flexible Height */}
-            <div className="flex-1 min-h-0 bg-card rounded-2xl border border-border shadow-sm relative overflow-hidden flex flex-col items-center justify-center p-4">
-                <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/5 to-zinc-900/5 dark:from-white/5 dark:to-transparent" />
+            <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-2xl border border-blue-100 bg-white/95 p-4 shadow-sm">
+                <div className="absolute inset-0 bg-linear-to-br from-blue-50/35 via-transparent to-indigo-50/25" />
 
                 <div className="relative z-10 flex flex-col items-center text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center mb-3 shadow-sm bg-background">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-slate-50 shadow-sm">
                         <Mail className="w-6 h-6 text-foreground" />
                     </div>
 

@@ -69,9 +69,9 @@ export function EmailProviderStep({ onSelect, isLoading }: EmailProviderStepProp
                 </p>
 
                 {/* Security Message */}
-                <div className="flex items-center justify-center gap-2 mt-6">
+                <div className="mt-6 flex items-center justify-center gap-2">
                     <ShieldCheckIcon className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-slate-600">
                         Your data is encrypted and secure
                     </span>
                 </div>
@@ -92,7 +92,7 @@ export function EmailProviderStep({ onSelect, isLoading }: EmailProviderStepProp
                                 }
                             }}
                             disabled={isLoading}
-                            className={`group relative p-8 rounded-2xl bg-card border-2 border-border hover:border-primary/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+                            className={`group relative rounded-2xl border-2 border-slate-200 bg-white/95 p-8 transition-all duration-300 hover:border-blue-200 hover:bg-blue-50/20 disabled:cursor-not-allowed disabled:opacity-50 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                                 }`}
                             style={{
                                 transitionDelay: `${index * 100 + 200}ms`,
@@ -101,7 +101,7 @@ export function EmailProviderStep({ onSelect, isLoading }: EmailProviderStepProp
                             {/* Popular Badge */}
                             {provider.popular && !isComingSoon && (
                                 <div className="absolute top-4 right-4">
-                                    <div className="px-3 py-1 text-xs font-medium bg-background border border-border rounded-full text-foreground flex items-center gap-1">
+                                    <div className="flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50/35 px-3 py-1 text-xs font-medium text-blue-700">
                                         <span>⭐</span>
                                         <span>Popular</span>
                                     </div>
@@ -111,7 +111,7 @@ export function EmailProviderStep({ onSelect, isLoading }: EmailProviderStepProp
                             {/* Coming Soon Badge */}
                             {isComingSoon && (
                                 <div className="absolute top-4 right-4">
-                                    <div className="px-3 py-1 text-xs font-medium bg-muted border border-border rounded-full text-muted-foreground flex items-center gap-1">
+                                    <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
                                         <span>🚀</span>
                                         <span>Coming Soon</span>
                                     </div>
@@ -120,7 +120,7 @@ export function EmailProviderStep({ onSelect, isLoading }: EmailProviderStepProp
 
                             {/* Logo */}
                             <div className="mb-6">
-                                <div className="w-16 h-16 rounded-2xl bg-background border border-border flex items-center justify-center mx-auto group-hover:scale-110 transition-transform p-3">
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50/35 p-3 transition-transform group-hover:scale-110">
                                     <Image
                                         src={provider.logo}
                                         alt={`${provider.name} logo`}
@@ -132,17 +132,17 @@ export function EmailProviderStep({ onSelect, isLoading }: EmailProviderStepProp
                             </div>
 
                             {/* Provider Name */}
-                            <h3 className="text-xl font-semibold text-foreground mb-2">
+                            <h3 className="mb-2 text-xl font-semibold text-slate-900">
                                 {provider.name}
                             </h3>
 
                             {/* Description */}
-                            <p className="text-sm text-muted-foreground mb-4">
+                            <p className="mb-4 text-sm text-slate-600">
                                 {provider.description}
                             </p>
 
                             {/* Hover Border Effect */}
-                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                            <div className="pointer-events-none absolute inset-0 rounded-2xl bg-linear-to-br from-primary/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                         </button>
                     );
                 })}

@@ -62,7 +62,7 @@ export function KnowledgeBaseStep({ onContinue, onBack }: KnowledgeBaseStepProps
             <div className="mb-8 pt-10">
                 <div className="flex justify-center mb-6">
                     <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-                        <BookIcon className="w-8 h-8 text-primary" />
+                        <BookIcon className="w-8 h-8 text-blue-600" />
                     </div>
                 </div>
                 <h1 className="text-3xl font-bold text-foreground mb-2">Add Knowledge Base</h1>
@@ -75,9 +75,9 @@ export function KnowledgeBaseStep({ onContinue, onBack }: KnowledgeBaseStepProps
             <div className="flex justify-center gap-4 mb-8">
                 <button
                     onClick={() => setMode("upload")}
-                    className={`px-6 py-3 rounded-lg flex items-center gap-2 transition-all ${mode === "upload"
-                        ? "bg-primary text-primary-foreground shadow-lg"
-                        : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                    className={`flex items-center gap-2 rounded-lg px-6 py-3 transition-all ${mode === "upload"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                         }`}
                 >
                     <UploadCloudIcon className="w-4 h-4" />
@@ -85,9 +85,9 @@ export function KnowledgeBaseStep({ onContinue, onBack }: KnowledgeBaseStepProps
                 </button>
                 <button
                     onClick={() => setMode("paste")}
-                    className={`px-6 py-3 rounded-lg flex items-center gap-2 transition-all ${mode === "paste"
-                        ? "bg-primary text-primary-foreground shadow-lg"
-                        : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                    className={`flex items-center gap-2 rounded-lg px-6 py-3 transition-all ${mode === "paste"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                         }`}
                 >
                     <FileTextIcon className="w-4 h-4" />
@@ -96,11 +96,11 @@ export function KnowledgeBaseStep({ onContinue, onBack }: KnowledgeBaseStepProps
             </div>
 
             {/* Content Area */}
-            <div className="mb-10 min-h-[300px] bg-card border border-border rounded-xl p-6 text-left">
+            <div className="mb-10 min-h-75 rounded-xl border border-slate-200 bg-white/95 p-6 text-left shadow-sm">
                 {mode === "upload" ? (
                     <div className="h-full flex flex-col">
                         <div
-                            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-10 text-center hover:bg-muted/50 transition-colors cursor-pointer flex-1 flex flex-col items-center justify-center"
+                            className="flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 p-10 text-center transition-colors hover:bg-slate-50"
                             onClick={() => fileInputRef.current?.click()}
                         >
                             <input
@@ -127,8 +127,8 @@ export function KnowledgeBaseStep({ onContinue, onBack }: KnowledgeBaseStepProps
                                 {files.map((file, index) => (
                                     <div key={index} className="flex items-center justify-between p-3 bg-background border border-border rounded-lg">
                                         <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                                <FileTextIcon className="w-4 h-4 text-primary" />
+                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-primary/10">
+                                                <FileTextIcon className="w-4 h-4 text-blue-600" />
                                             </div>
                                             <span className="text-sm text-foreground truncate">{file.name}</span>
                                             <span className="text-xs text-muted-foreground">({(file.size / 1024).toFixed(1)} KB)</span>
@@ -148,7 +148,7 @@ export function KnowledgeBaseStep({ onContinue, onBack }: KnowledgeBaseStepProps
                     <div className="h-full flex flex-col">
                         <Textarea
                             placeholder="Paste your company policies, guidelines, or any text context here..."
-                            className="flex-1 min-h-[300px] resize-none bg-background border-border text-foreground p-4 text-base"
+                            className="min-h-75 flex-1 resize-none border-slate-200 bg-slate-50/50 p-4 text-base text-slate-900"
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                         />

@@ -1,66 +1,141 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
+import { getConfig, getOrCreateDefaultAgent } from "@/lib/agent-store";
+import { ensureTwitterAccessToken } from "@/lib/twitter/oauth";
 
-export async function POST(req: Request) {
+const X_CREATE_TWEET_URL = "https://api.x.com/2/tweets";
+
+function readString(value: unknown) {
+    return typeof value === "string" ? value.trim() : "";
+}
+
+async function safeJson(response: Response) {
+    const text = await response.text();
+    if (!text) return null;
     try {
-        const { text, title, userId, media } = await req.json();
+        return JSON.parse(text);
+    } catch {
+        return { raw: text };
+    }
+}
 
-        // Integrate with RapidAPI twitter154 for live deployment
-        const rapidApiKey = process.env.RAPIDAPI_KEY || process.env.TWITTER154_API_KEY;
-        let finalResponseData: any = { status: "MOCKED_SUCCESS", id: `tw_${Date.now()}` };
+export async function POST(request: NextRequest) {
+    try {
+        const user = await requireUser(request);
+        const payload = await request.json();
 
-        if (rapidApiKey) {
-            try {
-                 // For automation we hit the 154 twitter endpoint for creating a tweet
-                 // In actual implementation we'd look up the exact URI from RapidAPI docs.
-                 const res = await fetch("https://twitter154.p.rapidapi.com/tweet/create", {
-                     method: "POST",
-                     headers: {
-                         "x-rapidapi-key": rapidApiKey,
-                         "x-rapidapi-host": "twitter154.p.rapidapi.com",
-                         "Content-Type": "application/json"
-                     },
-                     body: JSON.stringify({ text })
-                 });
-                 if (res.ok) {
-                    finalResponseData = await res.json();
-                 }
-            } catch (apiError) {
-                console.error("RapidAPI dispatch warning:", apiError);
-                // Fallthrough to DB storage if configured as mock failover
-            }
-        } else {
-             console.log("No RapidAPI Key found, mocking twitter dispatch for development pipeline.");
+        const text = readString(payload?.text);
+        const title = readString(payload?.title) || "Twitter Update";
+
+        if (!text) {
+            return NextResponse.json({ error: "text is required" }, { status: 400 });
         }
 
-        // --- DATABASE PERSISTENCE ---
+        const agent = await getOrCreateDefaultAgent(user.id);
+        let effectiveConfig = getConfig(agent);
+        let accessToken: string;
+
         try {
-            const currentPrisma = (global as any).__mailAgentPrisma || prisma;
-            if (currentPrisma && currentPrisma.unifiedMessage) {
-                await currentPrisma.unifiedMessage.create({
-                    data: {
-                        userId: userId || "default",
-                        platform: "twitter",
-                        contactId: "self",
-                        content: text || "",
-                        direction: "OUTBOUND",
-                        metadata: { 
-                            title: title || "Twitter Update",
-                            mediaUrl: media ? "UPLOADED_BINARY" : null,
-                            twitterUrn: finalResponseData.id || finalResponseData.tweet_id || `sim_${Date.now()}`,
-                            status: "PUBLISHED"
-                        }
-                    }
-                });
-            }
-        } catch (dbErr) {
-            console.error("Failed to save Twitter post to DB:", dbErr);
+            const ensured = await ensureTwitterAccessToken({
+                agentId: agent.id,
+                config: effectiveConfig,
+            });
+            accessToken = ensured.accessToken;
+            effectiveConfig = ensured.config;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Twitter OAuth access token is missing";
+            return NextResponse.json({ error: `${message}. Reconnect Twitter to continue.` }, { status: 400 });
         }
-        // ----------------------------
 
-        return NextResponse.json({ success: true, post: finalResponseData });
+        const postWithToken = async (token: string) => {
+            const response = await fetch(X_CREATE_TWEET_URL, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ text }),
+            });
 
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+            const json = await safeJson(response);
+            return { response, json };
+        };
+
+        let xCall = await postWithToken(accessToken);
+        if (xCall.response.status === 401 || xCall.response.status === 403) {
+            try {
+                const refreshed = await ensureTwitterAccessToken({
+                    agentId: agent.id,
+                    config: effectiveConfig,
+                    forceRefresh: true,
+                });
+                accessToken = refreshed.accessToken;
+                effectiveConfig = refreshed.config;
+                xCall = await postWithToken(accessToken);
+            } catch {
+                // Let final error handling below return a meaningful response.
+            }
+        }
+
+        const xResponse = xCall.response;
+        const xJson = xCall.json;
+        if (!xResponse.ok) {
+            const detail =
+                xJson && typeof xJson === "object"
+                    ? (
+                        ((xJson as Record<string, unknown>).detail as string)
+                        || ((xJson as Record<string, unknown>).title as string)
+                        || ((xJson as Record<string, unknown>).error as string)
+                    )
+                    : "";
+            return NextResponse.json({ error: detail || "Failed to create tweet on X" }, { status: xResponse.status || 500 });
+        }
+
+        const twitterConfig = effectiveConfig.socialConnections?.twitter;
+        const username = readString(twitterConfig?.username || twitterConfig?.accountId);
+
+        const tweetId =
+            xJson && typeof xJson === "object" && (xJson as Record<string, unknown>).data && typeof (xJson as Record<string, unknown>).data === "object"
+                ? readString(((xJson as Record<string, unknown>).data as Record<string, unknown>).id)
+                : "";
+
+        const tweetUrl = tweetId && username ? `https://x.com/${username}/status/${tweetId}` : null;
+
+        await prisma.unifiedMessage.create({
+            data: {
+                userId: user.id,
+                platform: "twitter",
+                contactId: "self",
+                content: text,
+                direction: "OUTBOUND",
+                metadata: {
+                    title,
+                    twitterUrn: tweetId || null,
+                    tweetId: tweetId || null,
+                    url: tweetUrl,
+                    status: "PUBLISHED",
+                    provider: "x-oauth",
+                },
+            },
+        });
+
+        return NextResponse.json({
+            success: true,
+            post: {
+                id: tweetId || `tw_${Date.now()}`,
+                tweet_id: tweetId || null,
+                url: tweetUrl,
+                provider: "x-oauth",
+                raw: xJson,
+            },
+        });
+    } catch (error) {
+        if (error instanceof Error && error.message === "Unauthorized") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const message = error instanceof Error ? error.message : "Failed to publish tweet";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

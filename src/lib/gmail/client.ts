@@ -8,7 +8,22 @@ export interface FetchedEmail {
   date: string;
   labels: string[];
   read: boolean;
-  attachments?: Array<{ filename: string; mimeType: string; size?: number }>;
+  attachments?: Array<{ filename: string; mimeType: string; size?: number; attachmentId?: string }>;
+}
+
+export interface GmailMessageDetails {
+  id: string;
+  threadId: string;
+  subject: string;
+  from: string;
+  snippet: string;
+  body: string;
+  bodyText: string;
+  bodyHtml: string;
+  date: string;
+  labels: string[];
+  read: boolean;
+  attachments: Array<{ filename: string; mimeType: string; size?: number; attachmentId?: string }>;
 }
 
 export type GmailRequestError = Error & { code?: number; retryAfterMs?: number };
@@ -129,6 +144,59 @@ function extractBody(payload: any): string {
   return "";
 }
 
+function htmlToText(html: string): string {
+  if (!html) return "";
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/p\s*>/gi, "\n\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractBodies(payload: any): { textPlain: string; textHtml: string } {
+  let textPlain = "";
+  let textHtml = "";
+
+  const walk = (part: any) => {
+    if (!part) return;
+
+    const mimeType = String(part.mimeType || "").toLowerCase();
+    const data = part.body?.data ? decodeBase64Url(part.body.data) : "";
+
+    if (mimeType === "text/html" && data && !textHtml) {
+      textHtml = data;
+    }
+
+    if (mimeType === "text/plain" && data && !textPlain) {
+      textPlain = data;
+    }
+
+    if (!mimeType && data && !textPlain) {
+      textPlain = data;
+    }
+
+    if (Array.isArray(part.parts)) {
+      part.parts.forEach(walk);
+    }
+  };
+
+  walk(payload);
+
+  if (!textPlain && payload?.body?.data) {
+    textPlain = decodeBase64Url(payload.body.data);
+  }
+
+  return { textPlain, textHtml };
+}
+
 function extractAttachments(payload: any): Array<{ filename: string; mimeType: string; size?: number }> {
   if (!payload?.parts) return [];
   const files: Array<{ filename: string; mimeType: string; size?: number }> = [];
@@ -139,6 +207,28 @@ function extractAttachments(payload: any): Array<{ filename: string; mimeType: s
         filename: part.filename,
         mimeType: part.mimeType || "application/octet-stream",
         size: part.body?.size,
+      });
+    }
+    if (Array.isArray(part.parts)) {
+      part.parts.forEach(walk);
+    }
+  };
+
+  payload.parts.forEach(walk);
+  return files;
+}
+
+function extractAttachmentsWithId(payload: any): Array<{ filename: string; mimeType: string; size?: number; attachmentId?: string }> {
+  if (!payload?.parts) return [];
+  const files: Array<{ filename: string; mimeType: string; size?: number; attachmentId?: string }> = [];
+
+  const walk = (part: any) => {
+    if (part.filename && part.body?.attachmentId) {
+      files.push({
+        filename: part.filename,
+        mimeType: part.mimeType || "application/octet-stream",
+        size: part.body?.size,
+        attachmentId: part.body?.attachmentId,
       });
     }
     if (Array.isArray(part.parts)) {
@@ -249,6 +339,34 @@ export async function getGoogleUserInfo(accessToken: string) {
     name: string;
     picture: string;
   }>;
+}
+
+export async function getGmailMessageDetails(accessToken: string, messageId: string): Promise<GmailMessageDetails> {
+  const message = await gmailRequest<any>(accessToken, `messages/${messageId}?format=full`);
+
+  const headers = message.payload?.headers || [];
+  const subject = getHeader(headers, "Subject") || "(No Subject)";
+  const from = getHeader(headers, "From") || "Unknown Sender";
+  const date = getHeader(headers, "Date") || new Date().toISOString();
+
+  const { textPlain, textHtml } = extractBodies(message.payload);
+  const bodyText = (textPlain || htmlToText(textHtml) || message.snippet || "").trim();
+  const bodyHtml = textHtml || "";
+
+  return {
+    id: message.id,
+    threadId: message.threadId,
+    subject,
+    from,
+    snippet: message.snippet || "",
+    body: bodyText || bodyHtml || message.snippet || "",
+    bodyText,
+    bodyHtml,
+    date,
+    labels: message.labelIds || [],
+    read: !(message.labelIds || []).includes("UNREAD"),
+    attachments: extractAttachmentsWithId(message.payload),
+  };
 }
 
 export async function modifyGmailLabels(

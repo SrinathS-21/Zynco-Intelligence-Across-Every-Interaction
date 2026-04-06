@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, X, SendHorizontal, Bot, BarChart3, Users, Zap, MessageSquare, Instagram, Linkedin, ChevronDown } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { Sparkles, X, SendHorizontal, Bot, ChevronDown } from "lucide-react";
 
 interface Message {
   id: string;
@@ -11,16 +12,16 @@ interface Message {
   timestamp: Date;
 }
 
-const CHAT_API_ENDPOINT = "/api/ai/chat";
+type ChatRequestSource = "instagram" | "linkedin" | "email" | "whatsapp" | "automation" | "twitter";
 
-const QUICK_ACTIONS = [
-  { label: "Generate Report", icon: BarChart3, prompt: "Give me a full cross-platform performance report for today." },
-  { label: "Lead Analysis", icon: Users, prompt: "Analyze my top leads across all platforms and prioritize them." },
-  { label: "Automation Status", icon: Zap, prompt: "What automations are currently running and what's their status?" },
-  { label: "WhatsApp Summary", icon: MessageSquare, prompt: "Summarize my recent WhatsApp conversations and pending replies." },
-  { label: "Instagram Insights", icon: Instagram, prompt: "What are my Instagram engagement stats and top performing posts?" },
-  { label: "LinkedIn Pipeline", icon: Linkedin, prompt: "Show me my LinkedIn B2B lead pipeline and connection requests." },
-];
+type ZyncoChatbotProps = {
+  openSignal?: number;
+  source?: ChatRequestSource;
+  context?: string;
+  pageLabel?: string;
+};
+
+const CHAT_API_ENDPOINT = "/api/ai/chat";
 
 const AI_RESPONSES: Record<string, string> = {
   default: "I'm analyzing your cross-platform data now. Based on current orchestration signals, your engagement is trending **+12.4%** this week. Would you like a detailed breakdown by platform?",
@@ -32,7 +33,40 @@ const AI_RESPONSES: Record<string, string> = {
   linkedin: "💼 **LinkedIn B2B Pipeline**\n\n• **Inbound leads**: 2 (Satya Nadella's org, TechScale VC)\n• **Connection requests**: 3 pending your review\n• **Post impressions**: 2.1K — above your 30-day avg\n• **Profile views**: 47 this week (+34%)\n\n**Recommendation**: Follow up with your Tuesday connections — optimal window is now.",
 };
 
-function getAIResponse(message: string): string {
+function sourceLabel(source: ChatRequestSource): string {
+  if (source === "twitter") return "Twitter/X";
+  return source.charAt(0).toUpperCase() + source.slice(1);
+}
+
+function shouldUsePageContext(message: string) {
+  const text = message.toLowerCase().trim();
+  if (!text) return false;
+
+  const explicitPatterns = [
+    /read\s+my\s+page/,
+    /check\s+my\s+page/,
+    /look\s+at\s+my\s+page/,
+    /what\s+do\s+you\s+see/,
+    /use\s+(the|this|my)?\s*context/,
+    /take\s+(the|this|my)?\s*page\s+as\s+context/,
+    /(based\s+on|from|using)\s+(this|my|the)?\s*(page|screen|dashboard|workspace|context)/,
+    /(recheck|re-check|check\s+again|look\s+again).*(page|screen|dashboard|workspace)/,
+  ];
+
+  if (explicitPatterns.some((pattern) => pattern.test(text))) {
+    return true;
+  }
+
+  const pageTerms = ["page", "screen", "dashboard", "workspace", "context", "what i see", "current view"];
+  const contextIntentTerms = ["look", "check", "read", "scan", "review", "see", "recheck", "use", "based on", "from", "using"];
+
+  const hasPageTerm = pageTerms.some((term) => text.includes(term));
+  const hasContextIntent = contextIntentTerms.some((term) => text.includes(term));
+
+  return hasPageTerm && hasContextIntent;
+}
+
+function getAIResponse(message: string, source: ChatRequestSource): string {
   const lower = message.toLowerCase();
   if (lower.includes("report") || lower.includes("performance")) return AI_RESPONSES.report;
   if (lower.includes("lead") || lower.includes("prioritize") || lower.includes("pipeline") && lower.includes("lead")) return AI_RESPONSES.lead;
@@ -40,56 +74,37 @@ function getAIResponse(message: string): string {
   if (lower.includes("whatsapp") || lower.includes("message") || lower.includes("chat")) return AI_RESPONSES.whatsapp;
   if (lower.includes("instagram") || lower.includes("ig") || lower.includes("reel")) return AI_RESPONSES.instagram;
   if (lower.includes("linkedin") || lower.includes("b2b") || lower.includes("connection")) return AI_RESPONSES.linkedin;
-  return AI_RESPONSES.default;
+  return `${AI_RESPONSES.default}\n\nI can tailor this to your current ${sourceLabel(source)} page context if you tell me exactly what you want to draft, analyze, or troubleshoot.`;
 }
 
-function renderInlineStrong(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>;
-    }
-    return <span key={`${part}-${index}`}>{part}</span>;
-  });
-}
-
-function MarkdownText({ content }: { content: string }) {
-  const lines = content.split('\n');
+function AssistantMarkdown({ content }: { content: string }) {
   return (
-    <div className="space-y-1">
-      {lines.map((line, i) => {
-        if (line.startsWith('•') || line.startsWith('-')) {
-          return (
-            <div key={i} className="flex gap-2 text-sm text-slate-700 leading-relaxed">
-              <span className="text-blue-500 mt-0.5 shrink-0">•</span>
-              <span>{renderInlineStrong(line.replace(/^[•\-]\s*/, ''))}</span>
-            </div>
-          );
-        }
-        if (/^\d+\./.test(line)) {
-          return (
-            <div key={i} className="flex gap-2 text-sm text-slate-700 leading-relaxed">
-              <span className="text-blue-500 font-bold shrink-0">{line.match(/^\d+/)?.[0]}.</span>
-              <span>{renderInlineStrong(line.replace(/^\d+\.\s*/, ''))}</span>
-            </div>
-          );
-        }
-        if (line === '') return <div key={i} className="h-1" />;
-        return (
-          <p key={i} className="text-sm text-slate-700 leading-relaxed">{renderInlineStrong(line)}</p>
-        );
-      })}
-    </div>
+    <ReactMarkdown
+      components={{
+        p: ({ children }) => <p className="text-sm text-slate-700 leading-relaxed">{children}</p>,
+        strong: ({ children }) => <strong className="font-semibold text-slate-900">{children}</strong>,
+        em: ({ children }) => <em className="italic text-slate-700">{children}</em>,
+        ul: ({ children }) => <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">{children}</ol>,
+        li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+        h1: ({ children }) => <h3 className="mt-1 text-sm font-bold text-slate-900">{children}</h3>,
+        h2: ({ children }) => <h3 className="mt-1 text-sm font-bold text-slate-900">{children}</h3>,
+        h3: ({ children }) => <h4 className="mt-1 text-sm font-semibold text-slate-900">{children}</h4>,
+        code: ({ children }) => <code className="rounded bg-slate-100 px-1 py-0.5 text-[12px] text-slate-800">{children}</code>,
+      }}
+    >
+      {content}
+    </ReactMarkdown>
   );
 }
 
-export default function ZyncoChatbot() {
+export default function ZyncoChatbot({ openSignal = 0, source = "automation", context, pageLabel }: ZyncoChatbotProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: "Hello! I'm **Zynco AI**, your cross-platform orchestration assistant. I can generate reports, analyze leads, summarize your WhatsApp/Instagram/LinkedIn activity, and much more.\n\nWhat would you like to know?",
+      content: "Hello! I'm **Zynco AI**. It's great to see you here.\n\nHow can I help you today?",
       timestamp: new Date(),
     },
   ]);
@@ -104,6 +119,12 @@ export default function ZyncoChatbot() {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (openSignal > 0) {
+      setIsOpen(true);
+    }
+  }, [openSignal]);
 
   useEffect(() => {
     const onEsc = (event: KeyboardEvent) => {
@@ -136,6 +157,8 @@ export default function ZyncoChatbot() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: trimmed,
+          source,
+          context: shouldUsePageContext(trimmed) ? context : undefined,
           history: messages.slice(-8).map((msg) => ({ role: msg.role, content: msg.content })),
         }),
       });
@@ -148,12 +171,12 @@ export default function ZyncoChatbot() {
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.reply?.trim() || getAIResponse(trimmed),
+        content: data.reply?.trim() || getAIResponse(trimmed, source),
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, aiMsg]);
     } catch {
-      const fallbackMessage = getAIResponse(trimmed);
+      const fallbackMessage = getAIResponse(trimmed, source);
       setMessages(prev => [
         ...prev,
         {
@@ -188,7 +211,7 @@ export default function ZyncoChatbot() {
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             style={{ width: "100%", maxWidth: 420, height: "min(75dvh, 600px)", maxHeight: "calc(100dvh - 7rem)" }}
             className="flex flex-col rounded-3xl overflow-hidden shadow-2xl"
-            // Fully opaque, no transparency
+          // Fully opaque, no transparency
           >
             {/* HEADER */}
             <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ background: '#0f172a' }}>
@@ -200,7 +223,9 @@ export default function ZyncoChatbot() {
                   <p className="text-sm font-black" style={{ color: 'white', letterSpacing: '-0.02em' }}>Zynco AI Assistant</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: '#34d399' }} />
-                    <span className="text-xs font-bold uppercase" style={{ color: '#94a3b8', letterSpacing: '0.1em', fontSize: 9 }}>Orchestration Online</span>
+                    <span className="text-xs font-bold uppercase" style={{ color: '#94a3b8', letterSpacing: '0.1em', fontSize: 9 }}>
+                      {pageLabel ? `Context: ${pageLabel}` : "Orchestration Online"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -234,7 +259,7 @@ export default function ZyncoChatbot() {
                   >
                     {msg.role === 'user'
                       ? <p className="text-sm font-medium" style={{ color: 'white' }}>{msg.content}</p>
-                      : <MarkdownText content={msg.content} />
+                      : <AssistantMarkdown content={msg.content} />
                     }
                     <p className="text-xs mt-1.5" style={{ color: msg.role === 'user' ? 'rgba(255,255,255,0.6)' : '#94a3b8' }}>
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -267,29 +292,6 @@ export default function ZyncoChatbot() {
               {requestError && (
                 <div className="rounded-xl px-3 py-2 text-xs font-medium border" style={{ background: '#fffbeb', color: '#92400e', borderColor: '#fde68a' }}>
                   {requestError}
-                </div>
-              )}
-
-              {/* Quick actions — only show if just welcome message */}
-              {messages.length === 1 && !isTyping && (
-                <div className="space-y-2 pt-2">
-                  <p className="text-xs font-black uppercase" style={{ color: '#94a3b8', letterSpacing: '0.1em' }}>Quick Actions</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {QUICK_ACTIONS.map(action => (
-                      <button
-                        key={action.label}
-                        onClick={() => sendMessage(action.prompt)}
-                        disabled={isTyping}
-                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-left transition-all"
-                        style={{ background: 'white', border: '1px solid #e2e8f0', fontSize: 11, fontWeight: 700, color: '#475569' }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.color = '#2563eb'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }}
-                      >
-                        <action.icon className="w-3.5 h-3.5 shrink-0" />
-                        {action.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               )}
 
@@ -338,8 +340,8 @@ export default function ZyncoChatbot() {
         className="w-16 h-16 rounded-2xl flex items-center justify-center relative"
         aria-label={isOpen ? "Close chatbot" : "Open chatbot"}
         style={{
-          background: isOpen ? '#0f172a' : '#2563eb',
-          boxShadow: isOpen ? '0 8px 32px rgba(15,23,42,0.4)' : '0 8px 32px rgba(37,99,235,0.5)',
+          background: '#0f172a',
+          boxShadow: isOpen ? '0 8px 32px rgba(15,23,42,0.45)' : '0 8px 32px rgba(15,23,42,0.38)',
         }}
       >
         {!isOpen && (

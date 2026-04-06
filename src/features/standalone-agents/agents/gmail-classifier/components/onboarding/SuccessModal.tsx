@@ -44,11 +44,11 @@ export function SuccessModal({ userEmail, provider, onContinue }: SuccessModalPr
                     }`}
             >
                 {/* Modal Card */}
-                <div className="p-8 rounded-2xl bg-card border border-border">
+                <div className="rounded-2xl border border-blue-100 bg-white/95 p-8 shadow-sm">
                     {/* Success Icon with Animation */}
                     <div className="flex justify-center mb-6">
                         <div
-                            className={`w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center transition-all duration-500 ${checkmarkVisible ? "scale-100 rotate-0" : "scale-0 rotate-45"
+                            className={`flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 transition-all duration-500 ${checkmarkVisible ? "scale-100 rotate-0" : "scale-0 rotate-45"
                                 }`}
                         >
                             <CheckCircleIcon className="w-10 h-10 text-green-500" />
@@ -67,10 +67,10 @@ export function SuccessModal({ userEmail, provider, onContinue }: SuccessModalPr
 
                     {/* User Profile Card - Centered */}
                     <div className="mb-6">
-                        <div className="p-4 rounded-xl bg-muted/50 border border-border">
+                        <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4">
                             <div className="flex items-center justify-center gap-3">
                                 {/* Avatar */}
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center font-semibold text-primary border border-primary/20 flex-shrink-0">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-blue-100 bg-blue-100/70 font-semibold text-blue-700">
                                     {getInitials(userEmail)}
                                 </div>
 
@@ -79,7 +79,7 @@ export function SuccessModal({ userEmail, provider, onContinue }: SuccessModalPr
                                     <p className="font-medium text-foreground text-sm mb-1">
                                         {userEmail}
                                     </p>
-                                    <div className="flex items-center justify-center gap-1.5 text-xs text-green-500">
+                                    <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-600">
                                         <div className="w-2 h-2 rounded-full bg-green-500" />
                                         <span>Secure OAuth Connection</span>
                                     </div>
@@ -102,7 +102,7 @@ export function SuccessModal({ userEmail, provider, onContinue }: SuccessModalPr
                                         transitionDelay: `${(i + 1) * 150}ms`,
                                     }}
                                 >
-                                    <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center flex-shrink-0">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
                                         <Icon className="w-4 h-4 text-foreground" />
                                     </div>
                                     <span className="text-left">{feature.text}</span>

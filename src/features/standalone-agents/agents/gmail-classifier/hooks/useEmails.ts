@@ -94,7 +94,19 @@ export function useEmails(agentId: string, isConnected: boolean) {
     // ─── Data Access ─────────────────────────────────────────────────────────
 
     const fetchEmailDetails = useCallback(async (emailId: string) => {
-        if (emailDetails.has(emailId)) return;
+        if (emailDetails.has(emailId)) {
+            const cached = emailDetails.get(emailId) as {
+                body?: string;
+                bodyHtml?: string;
+            } | undefined;
+
+            const cachedHtml = String(cached?.bodyHtml || "").trim();
+            const cachedBody = String(cached?.body || "").trim();
+            const looksLikeRawHtmlText = !cachedHtml
+                && /<!doctype|<html|<body|<table|&lt;html|&lt;body|&lt;table/i.test(cachedBody);
+
+            if (!looksLikeRawHtmlText) return;
+        }
 
         try {
             setLoadingEmailId(emailId);

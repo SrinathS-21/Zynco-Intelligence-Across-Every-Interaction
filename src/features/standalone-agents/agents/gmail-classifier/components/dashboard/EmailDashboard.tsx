@@ -560,7 +560,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
             <aside
                 id="tutorial-sidebar"
                 className={cn(
-                    "flex-shrink-0 border-r border-border bg-muted/10 flex flex-col transition-all duration-300 z-50",
+                    "shrink-0 border-r border-border bg-muted/10 flex flex-col transition-all duration-300 z-50",
                     sidebarCollapsed
                         ? "hidden md:flex md:w-16"
                         : "absolute inset-y-0 left-0 w-64 shadow-2xl md:static md:w-56 md:shadow-none bg-background md:bg-muted/10"
@@ -646,7 +646,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                             )}
                         >
-                            <item.icon className={cn("w-4 h-4 flex-shrink-0", selectedFolder === item.id && "text-primary")} />
+                            <item.icon className={cn("w-4 h-4 shrink-0", selectedFolder === item.id && "text-primary")} />
                             {!sidebarCollapsed && (
                                 <>
                                     <span className="flex-1 text-left">{item.label}</span>
@@ -828,8 +828,8 @@ export function EmailDashboard(props: EmailDashboardProps) {
             <main className="flex-1 flex flex-col overflow-hidden min-w-0">
 
                 {/* SHARED HEADER - Spans full width above both panes */}
-                <header className="flex-shrink-0 flex items-center justify-between gap-4 px-4 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                    <div className="flex items-center gap-4 flex-shrink-0">
+                <header className="shrink-0 flex items-center justify-between gap-4 px-4 py-3 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+                    <div className="flex items-center gap-4 shrink-0">
                         {/* Connected Tools - Logo Row */}
                         <div className="flex items-center gap-2">
                             {/* Gmail - Always Primary */}
@@ -841,7 +841,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
 
                             {/* Divider if other integrations exist */}
                             {(props.isSlackConnected || props.isJiraConnected || props.isNotionConnected) && (
-                                <div className="h-4 w-[1px] bg-border mx-1" />
+                                <div className="h-4 w-px bg-border mx-1" />
                             )}
 
                             {/* Slack */}
@@ -953,7 +953,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                 </header>
 
                 {/* SHARED TOOLBAR - Controls + Categories */}
-                <div id="tutorial-sync-refresh" className="flex-shrink-0 px-4 py-2 border-b border-border flex items-center justify-between bg-background/50 backdrop-blur">
+                <div id="tutorial-sync-refresh" className="shrink-0 px-4 py-2 border-b border-border flex items-center justify-between bg-background/50 backdrop-blur">
                     <div className="flex items-center gap-2">
 
                         <Button
@@ -966,7 +966,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                             title="Sync Emails"
                         >
                             <RefreshCw className={cn("w-4 h-4", emailState.isSyncing && "animate-spin")} />
-                            {emailState.isSyncing && <span className="text-xs truncate max-w-[80px]">Syncing...</span>}
+                            {emailState.isSyncing && <span className="text-xs truncate max-w-20">Syncing...</span>}
                         </Button>
                         <Button id="tutorial-sync-prefs-btn" variant="ghost" size="icon" onClick={() => setShowSyncModal(true)} className="h-8 w-8" title="Sync Preferences">
                             <Settings className="w-4 h-4" />
@@ -979,7 +979,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                     <button
                                         key={tab.id}
                                         onClick={() => { emailState.setSelectedCategory(tab.id); emailState.setCurrentPage(1); }}
-                                        className={cn("flex-shrink-0 px-2.5 py-1 text-xs font-medium rounded-full border transition-all",
+                                        className={cn("shrink-0 px-2.5 py-1 text-xs font-medium rounded-full border transition-all",
                                             isActive ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border text-muted-foreground hover:border-primary/50"
                                         )}
                                     >
@@ -1015,7 +1015,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                 </div>
 
                 {/* Advanced Filters Bar */}
-                <div id="tutorial-filters-sort" className="flex-shrink-0 px-4 py-2 border-b border-border bg-muted/20">
+                <div id="tutorial-filters-sort" className="shrink-0 px-4 py-2 border-b border-border bg-muted/20">
                     <FilterToolbar
                         emails={emailState.emails}
                         filters={emailState.advancedFilters}
@@ -1038,7 +1038,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                     {selectedFolder === 'settings' ? (
                         <div className="flex-1 flex flex-col bg-muted/10 animate-in fade-in duration-300">
                             {/* Settings Header */}
-                            <div className="flex-shrink-0 px-8 py-6 border-b border-border bg-background/50">
+                            <div className="shrink-0 px-8 py-6 border-b border-border bg-background/50">
                                 <h2 className="text-2xl font-bold tracking-tight text-foreground">Settings</h2>
                                 <p className="text-muted-foreground text-sm mt-1">Manage your integrations and automation rules.</p>
                             </div>
@@ -1046,7 +1046,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                             {/* Settings Content - Better Layout */}
                             <div className="flex-1 flex flex-col gap-6 p-6 overflow-auto">
                                 {/* Top Row: Account + Integrations (side by side) */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-shrink-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
                                     {/* Account Card (Now includes Gmail) */}
                                     <div className="rounded-xl border border-border bg-card p-4">
                                         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center justify-between">
@@ -1069,7 +1069,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                                 {agentState.config?.gmailProfilePicture ? (
                                                     <AvatarImage src={agentState.config.gmailProfilePicture} alt="Profile" />
                                                 ) : null}
-                                                <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-primary-foreground font-medium text-sm">
+                                                <AvatarFallback className="bg-linear-to-br from-primary to-purple-600 text-primary-foreground font-medium text-sm">
                                                     {/* Use Gmail Name Initial if available, else User Email Initial */}
                                                     {(agentState.config?.gmailProfileName?.[0] || agentState.config?.gmailEmail?.[0])?.toUpperCase()}
                                                 </AvatarFallback>
@@ -1185,7 +1185,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                     ) : selectedFolder === 'history' ? (
                         <div className="flex-1 flex flex-col bg-muted/10 animate-in fade-in duration-300">
                             {/* History Header */}
-                            <div className="flex-shrink-0 px-8 py-6 border-b border-border bg-background/50">
+                            <div className="shrink-0 px-8 py-6 border-b border-border bg-background/50">
                                 <h2 className="text-2xl font-bold tracking-tight text-foreground">Activity History</h2>
                                 <p className="text-muted-foreground text-sm mt-1">Track all automated actions, connections, and changes.</p>
                             </div>
@@ -1249,8 +1249,8 @@ export function EmailDashboard(props: EmailDashboardProps) {
                             <>
                                 {/* EMAIL LIST PANE */}
                                 <div className={cn(
-                                    "flex flex-col border-r border-border bg-background flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden",
-                                    isReadingPaneOpen ? "hidden md:flex w-full md:w-[380px] lg:w-[420px] resize-x" : "w-full flex"
+                                    "flex flex-col border-r border-border bg-background shrink-0 transition-all duration-300 ease-in-out overflow-hidden",
+                                    isReadingPaneOpen ? "hidden md:flex w-full md:w-95 lg:w-105 resize-x" : "w-full flex"
                                 )}>
 
                                     {/* Scrollable Email List */}
@@ -1333,7 +1333,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                                                             "px-4 py-2 cursor-pointer transition-all hover:bg-muted/30 dark:hover:bg-red-900/10 border-l-2",
                                                                             isActive
                                                                                 ? "bg-muted/50 dark:bg-zinc-800/50 border-l-red-500"
-                                                                                : "border-l-transparent border-l-red-500/30 hover:border-l-red-500/50"
+                                                                                : "border-l-red-500/30 hover:border-l-red-500/50"
                                                                         )}
                                                                     >
                                                                         <div className="flex items-center justify-between gap-2">
@@ -1371,8 +1371,8 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                                                 }}
                                                                 className={cn(
                                                                     "group relative px-3 py-2 cursor-pointer transition-all border-l-2 border-b border-border/50 email-list-item", // Added email-list-item class
-                                                                    "hover:bg-muted/50 dark:hover:bg-gradient-to-r dark:hover:from-zinc-900 dark:hover:to-neutral-900",
-                                                                    isActive ? "bg-primary/5 dark:bg-gradient-to-r dark:from-zinc-900 dark:to-neutral-900 border-l-primary" : "border-l-transparent",
+                                                                    "hover:bg-muted/50 dark:hover:bg-linear-to-r dark:hover:from-zinc-900 dark:hover:to-neutral-900",
+                                                                    isActive ? "bg-primary/5 dark:bg-linear-to-r dark:from-zinc-900 dark:to-neutral-900 border-l-primary" : "border-l-transparent",
                                                                     isUrgent && !isActive && "border-l-red-500",
                                                                     !email.isRead && !isActive && "bg-muted/20 dark:bg-zinc-900/30"
                                                                 )}
@@ -1413,7 +1413,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                                                                 SILENCED
                                                                             </Badge>
                                                                         )}
-                                                                        <Badge className={cn("text-[10px] px-1.5 h-5 min-w-[20px] shrink-0 font-medium flex items-center justify-center", getCategoryStyle(email.category))}>
+                                                                        <Badge className={cn("text-[10px] px-1.5 h-5 min-w-5 shrink-0 font-medium flex items-center justify-center", getCategoryStyle(email.category))}>
                                                                             {/* Only show icon, no text label */}
                                                                             {email.category === 'promotional' && <Tag className="w-3 h-3" />}
                                                                             {email.category === 'updates' && <RefreshCw className="w-3 h-3" />}
@@ -1466,7 +1466,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                         {activeEmail ? (
                                             <div className="flex flex-col h-full animate-in fade-in duration-300">
                                                 {/* Reading Pane Toolbar */}
-                                                <div className="flex-shrink-0 h-[60px] border-b border-border flex items-center justify-between px-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                                                <div className="shrink-0 h-15 border-b border-border flex items-center justify-between px-6 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
                                                     <div className="flex items-center gap-2">
                                                         <Button variant="ghost" size="icon" onClick={() => setActiveEmailId(null)} className="md:hidden"><ChevronLeft className="w-4 h-4" /></Button>
                                                         <div className="flex items-center gap-1.5 text-muted-foreground mr-1">
@@ -1656,12 +1656,12 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                                         {/* Email Body */}
                                                         {!emailState.loadingEmailId && emailState.emailDetails.has(activeEmail.id) ? (
                                                             <EmailBodyRenderer
-                                                                htmlBody={emailState.emailDetails.get(activeEmail.id)?.bodyHtml || (activeEmail as any).body}
-                                                                textBody={emailState.emailDetails.get(activeEmail.id)?.bodyText || activeEmail.snippet}
+                                                                htmlBody={emailState.emailDetails.get(activeEmail.id)?.bodyHtml}
+                                                                textBody={emailState.emailDetails.get(activeEmail.id)?.bodyText || (activeEmail as any).body || activeEmail.snippet}
                                                             />
                                                         ) : !emailState.loadingEmailId ? (
                                                             <div className="prose prose-slate dark:prose-invert max-w-none">
-                                                                <div className="whitespace-pre-wrap leading-relaxed text-foreground/90 font-light text-base">
+                                                                <div className="whitespace-pre-wrap wrap-anywhere leading-relaxed text-foreground/90 font-light text-base">
                                                                     {activeEmail.snippet}
                                                                 </div>
                                                             </div>
@@ -1742,7 +1742,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                                                 </div>
 
                                                                 {/* AI Smart Responses */}
-                                                                <div className="p-4 rounded-2xl bg-primary/[0.03] border border-primary/10">
+                                                                <div className="p-4 rounded-2xl bg-primary/3 border border-primary/10">
                                                                     <div className="flex items-center gap-2 mb-3 text-[10px] font-bold uppercase tracking-widest text-primary/60">
                                                                         <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                                                                         AI Suggested Responses
@@ -1792,7 +1792,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
 
                                                                 {/* Inline Reply Area */}
                                                                 {isInlineReplyOpen && (
-                                                                    <div id="inline-reply-box" className="mt-6 p-4 rounded-2xl border border-primary/20 bg-primary/[0.02] shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                                                    <div id="inline-reply-box" className="mt-6 p-4 rounded-2xl border border-primary/20 bg-primary/2 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
                                                                         <div className="flex items-center gap-2 mb-3">
                                                                             <Avatar className="w-6 h-6 border-none">
                                                                                 <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">AI</AvatarFallback>
@@ -1810,7 +1810,7 @@ export function EmailDashboard(props: EmailDashboardProps) {
                                                                             </div>
                                                                         </div>
                                                                         <textarea
-                                                                            className="w-full min-h-[120px] p-3 rounded-xl bg-background border border-border/60 focus:border-primary/40 focus:ring-1 focus:ring-primary/20 text-sm leading-relaxed resize-none transition-all placeholder:text-muted-foreground/50"
+                                                                            className="w-full min-h-30 p-3 rounded-xl bg-background border border-border/60 focus:border-primary/40 focus:ring-1 focus:ring-primary/20 text-sm leading-relaxed resize-none transition-all placeholder:text-muted-foreground/50"
                                                                             value={inlineReplyText}
                                                                             onChange={(e) => setInlineReplyText(e.target.value)}
                                                                             placeholder="Type your reply here..."
@@ -1984,3 +1984,4 @@ export function EmailDashboard(props: EmailDashboardProps) {
         </div>
     );
 }
+

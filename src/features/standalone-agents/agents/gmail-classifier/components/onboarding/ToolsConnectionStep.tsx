@@ -88,7 +88,7 @@ export function ToolsConnectionStep({
 
             {/* User Email Header */}
             <div className="flex items-center justify-center gap-2 mb-8">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center font-semibold text-primary text-sm border border-primary/20">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-blue-100 bg-blue-50/60 text-sm font-semibold text-blue-700">
                     {getInitials(userEmail)}
                 </div>
                 <span className="text-sm text-muted-foreground">{userEmail}</span>
@@ -114,7 +114,7 @@ export function ToolsConnectionStep({
                     return (
                         <div
                             key={tool.id}
-                            className={`relative p-6 rounded-2xl bg-card border-2 border-border hover:border-primary/30 transition-all duration-300 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+                            className={`relative rounded-2xl border-2 border-slate-200 bg-white/95 p-6 transition-all duration-300 hover:border-blue-200 hover:bg-blue-50/20 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                                 }`}
                             style={{
                                 transitionDelay: `${index * 100 + 200}ms`,
@@ -123,7 +123,7 @@ export function ToolsConnectionStep({
                             {/* Popular Badge */}
                             {tool.popular && !isComingSoon && (
                                 <div className="absolute top-4 right-4">
-                                    <div className="px-2 py-1 text-xs font-medium bg-background border border-border rounded-full text-foreground flex items-center gap-1">
+                                    <div className="flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50/35 px-2 py-1 text-xs font-medium text-blue-700">
                                         <span>⭐</span>
                                         <span>Popular</span>
                                     </div>
@@ -133,7 +133,7 @@ export function ToolsConnectionStep({
                             {/* Coming Soon Badge */}
                             {isComingSoon && (
                                 <div className="absolute top-4 right-4">
-                                    <div className="px-2 py-1 text-xs font-medium bg-muted border border-border rounded-full text-muted-foreground flex items-center gap-1">
+                                    <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-500">
                                         <span>🚀</span>
                                         <span>Coming Soon</span>
                                     </div>
@@ -141,7 +141,7 @@ export function ToolsConnectionStep({
                             )}
 
                             {/* Tool Icon */}
-                            <div className="w-16 h-16 rounded-2xl bg-background border border-border flex items-center justify-center mb-4 text-3xl overflow-hidden p-3">
+                            <div className="mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 p-3 text-3xl">
                                 {(tool as any).logoSrc ? (
                                     <div className="relative w-full h-full">
                                         <NextImage
@@ -157,12 +157,12 @@ export function ToolsConnectionStep({
                             </div>
 
                             {/* Tool Name */}
-                            <h3 className="text-xl font-semibold text-foreground mb-2">
+                            <h3 className="mb-2 text-xl font-semibold text-slate-900">
                                 {tool.name}
                             </h3>
 
                             {/* Tool Description */}
-                            <p className="text-sm text-muted-foreground mb-4">
+                            <p className="mb-4 text-sm text-slate-600">
                                 {tool.description}
                             </p>
 

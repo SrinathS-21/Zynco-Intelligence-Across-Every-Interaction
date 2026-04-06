@@ -7,7 +7,7 @@ import { createActivityLog } from "@/lib/activity";
 import { classifyByHeuristics, classifyWithGmailLabels, calculatePriority } from "@/lib/classification";
 import { evaluateRules, generateRuleId } from "@/lib/automation";
 import { exchangeCodeForTokens, getGmailOAuthUrl, refreshAccessToken } from "@/lib/gmail/oauth";
-import { fetchGmailEmails, getGmailProfile, getGoogleUserInfo, modifyGmailLabels } from "@/lib/gmail/client";
+import { fetchGmailEmails, getGmailMessageDetails, getGmailProfile, getGoogleUserInfo, modifyGmailLabels } from "@/lib/gmail/client";
 import {
   createJiraIssue,
   exchangeJiraCodeForTokens,
@@ -693,9 +693,37 @@ export async function GET(request: NextRequest, context: { params: Promise<{ slu
       const agent = await loadAgentForUser(user.id, agentId);
       if (!agent) return notFound("Agent not found");
 
+      let config = getConfig(agent);
       const data = getData(agent);
       const email = (data.emails || []).find((item: any) => item.id === emailId);
       if (!email) return notFound("Email not found");
+
+      try {
+        const tokenResult = await ensureValidToken(config);
+        config = tokenResult.config;
+
+        if (tokenResult.config !== getConfig(agent)) {
+          await persistAgent(agent.id, tokenResult.config, data);
+        }
+
+        const details = await getGmailMessageDetails(tokenResult.accessToken, emailId);
+
+        return ok({
+          id: details.id,
+          threadId: details.threadId,
+          subject: details.subject,
+          from: details.from,
+          body: details.body,
+          bodyText: details.bodyText,
+          bodyHtml: details.bodyHtml,
+          snippet: details.snippet,
+          date: details.date,
+          labels: details.labels,
+          attachments: details.attachments || [],
+        });
+      } catch {
+        // Fall back to cached content if live Gmail fetch fails.
+      }
 
       return ok({
         id: email.id,
@@ -703,6 +731,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ slu
         subject: email.subject,
         from: email.from,
         body: email.body || email.snippet || "",
+        bodyText: email.body || email.snippet || "",
+        bodyHtml: "",
         snippet: email.snippet || "",
         date: email.date,
         labels: email.labels || [],

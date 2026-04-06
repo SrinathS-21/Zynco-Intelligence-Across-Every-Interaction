@@ -31,15 +31,17 @@ function sanitizeRecipients(value: string[] | undefined) {
   return result.slice(0, 50);
 }
 
-function createActivityLog(channel: SocialChannel, accountId: string): ActivityLog {
-  const connected = Boolean(accountId);
+function createActivityLog(channel: SocialChannel, accountId: string, connectedOverride?: boolean): ActivityLog {
+  const connected = typeof connectedOverride === "boolean" ? connectedOverride : Boolean(accountId);
   return {
     id: globalThis.crypto?.randomUUID?.() || `conn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     type: "connection",
     action: connected ? `Connected ${channel}` : `Disconnected ${channel}`,
     details: connected
       ? `${channel} account linked (${accountId.slice(0, 24)})`
-      : `${channel} account unlinked`,
+      : accountId
+        ? `${channel} account needs OAuth reconnect`
+        : `${channel} account unlinked`,
     status: "success",
     timestamp: new Date().toISOString(),
     metadata: {
@@ -61,11 +63,19 @@ function buildConnectionMetrics(config: AgentConfig, data: AgentData): Dashboard
     return priority === "high" || priority === "critical";
   }).length;
 
+  const twitterConnection = socialConnections.twitter || {};
+  const twitterTokenPresent = Boolean(twitterConnection.oauthAccessToken || twitterConnection.oauthRefreshToken);
+  const twitterConnected = Boolean(
+    twitterConnection.accountId
+    && twitterTokenPresent
+    && twitterConnection.status !== "disconnected",
+  );
+
   const connections = {
     gmail: Boolean(config.accessToken),
     instagram: Boolean(socialConnections.instagram?.accountId),
     linkedin: Boolean(socialConnections.linkedin?.accountId),
-    twitter: Boolean(socialConnections.twitter?.accountId),
+    twitter: twitterConnected,
     jira: Boolean(config.jira?.accessToken),
   };
 
@@ -113,14 +123,29 @@ function sanitizeConnections(config: AgentConfig, data: AgentData) {
     },
     connectionMeta: {
       instagram: {
+        accountId: config.socialConnections?.instagram?.accountId || null,
+        username: config.socialConnections?.instagram?.username || null,
+        displayName: config.socialConnections?.instagram?.displayName || null,
+        avatarUrl: config.socialConnections?.instagram?.avatarUrl || null,
+        externalUserId: config.socialConnections?.instagram?.externalUserId || null,
         connectedAt: config.socialConnections?.instagram?.connectedAt || null,
         status: config.socialConnections?.instagram?.status || "disconnected",
       },
       linkedin: {
+        accountId: config.socialConnections?.linkedin?.accountId || null,
+        username: config.socialConnections?.linkedin?.username || null,
+        displayName: config.socialConnections?.linkedin?.displayName || null,
+        avatarUrl: config.socialConnections?.linkedin?.avatarUrl || null,
+        externalUserId: config.socialConnections?.linkedin?.externalUserId || null,
         connectedAt: config.socialConnections?.linkedin?.connectedAt || null,
         status: config.socialConnections?.linkedin?.status || "disconnected",
       },
       twitter: {
+        accountId: config.socialConnections?.twitter?.accountId || null,
+        username: config.socialConnections?.twitter?.username || null,
+        displayName: config.socialConnections?.twitter?.displayName || null,
+        avatarUrl: config.socialConnections?.twitter?.avatarUrl || null,
+        externalUserId: config.socialConnections?.twitter?.externalUserId || null,
         connectedAt: config.socialConnections?.twitter?.connectedAt || null,
         status: config.socialConnections?.twitter?.status || "disconnected",
       },
@@ -183,15 +208,33 @@ export async function POST(request: NextRequest) {
 
     if (channel && typeof accountId === "string") {
       const nextAccountId = (accountId || "").trim();
+      const previous = nextConfig.socialConnections![channel] || {};
+      const isTwitterWithoutOAuth = channel === "twitter" && nextAccountId && !(previous.oauthAccessToken || previous.oauthRefreshToken);
+      const shouldMarkConnected = Boolean(nextAccountId) && !isTwitterWithoutOAuth;
+
       nextConfig.socialConnections![channel] = {
+        ...previous,
         accountId: nextAccountId,
-        connectedAt: nextAccountId ? new Date().toISOString() : null,
-        disconnectedAt: nextAccountId ? null : new Date().toISOString(),
-        status: nextAccountId ? "connected" : "disconnected",
+        connectedAt: shouldMarkConnected ? new Date().toISOString() : null,
+        disconnectedAt: shouldMarkConnected ? null : new Date().toISOString(),
+        status: shouldMarkConnected ? "connected" : "disconnected",
+        ...(nextAccountId
+          ? {}
+          : {
+            username: undefined,
+            displayName: undefined,
+            avatarUrl: null,
+            externalUserId: undefined,
+            oauthAccessToken: undefined,
+            oauthRefreshToken: undefined,
+            oauthTokenType: undefined,
+            oauthScope: undefined,
+            oauthExpiresAt: null,
+          }),
       };
 
       const currentLogs = Array.isArray(currentConfig.activityLogs) ? currentConfig.activityLogs : [];
-      nextConfig.activityLogs = [createActivityLog(channel, nextAccountId), ...currentLogs].slice(0, 300);
+      nextConfig.activityLogs = [createActivityLog(channel, nextAccountId, shouldMarkConnected), ...currentLogs].slice(0, 300);
     }
 
     if (typeof onboardingCompleted === "boolean") {

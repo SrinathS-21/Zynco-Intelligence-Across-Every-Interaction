@@ -397,9 +397,9 @@ export default function EmailClassifierEditor(props: StandaloneAgentEditorProps)
 
     // SETUP / ONBOARDING VIEW
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden">
+        <div className="flex h-full w-full flex-col overflow-hidden bg-slate-50/60">
             <div className="flex-1 overflow-auto">
-                <div className="px-6 py-8 max-w-[1200px] mx-auto">
+                <div className="mx-auto max-w-300 px-6 py-8">
                     {/* Only show progress if NOT in dashboard view (handled by isEditing check above) */}
 
                     {/* Back Button to Dashboard */}
@@ -408,7 +408,7 @@ export default function EmailClassifierEditor(props: StandaloneAgentEditorProps)
                             variant="ghost"
                             size="sm"
                             onClick={() => setOnboarding(prev => ({ ...prev, isEditing: false }))}
-                            className="text-muted-foreground hover:text-foreground"
+                            className="border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                         >
                             Exit Setup
                             <ChevronLeft className="w-4 h-4 ml-1 rotate-180" />

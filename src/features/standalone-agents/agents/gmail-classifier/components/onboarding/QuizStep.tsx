@@ -157,10 +157,10 @@ export function QuizStep({ onComplete, onBack }: QuizStepProps) {
                 </div>
 
                 {/* Main Card */}
-                <div className="w-full bg-card border border-border rounded-2xl p-6 shadow-sm">
+                <div className="w-full rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm">
 
                     <div className="mb-5 text-center sm:text-left">
-                        <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase mb-1 block">
+                        <span className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-blue-600">
                             PERSONALIZATION
                         </span>
                         <h2 className="text-xl font-bold text-card-foreground mb-1">
@@ -180,23 +180,23 @@ export function QuizStep({ onComplete, onBack }: QuizStepProps) {
                                 key={option.value}
                                 onClick={() => handleAnswer(option.value)}
                                 className={`w-full p-3 rounded-lg border text-left transition-all duration-200 group flex items-center justify-between ${currentSelection === option.value
-                                    ? "bg-secondary border-primary/50"
-                                    : "bg-background border-border hover:bg-secondary hover:border-border"
+                                    ? "border-blue-200 bg-blue-50/65"
+                                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                                     }`}
                             >
                                 <div>
                                     <div className="text-sm font-medium text-foreground mb-0">
                                         {option.label}
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground group-hover:text-foreground/80 transition-colors">
+                                    <div className="text-[10px] text-slate-500 transition-colors group-hover:text-slate-700">
                                         {option.description}
                                     </div>
                                 </div>
 
                                 {/* Radio Circle */}
                                 <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${currentSelection === option.value
-                                    ? "border-primary bg-primary"
-                                    : "border-muted-foreground/30 group-hover:border-foreground/50"
+                                    ? "border-blue-600 bg-blue-600"
+                                    : "border-slate-300 group-hover:border-slate-500"
                                     }`}>
                                     {currentSelection === option.value && (
                                         <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />

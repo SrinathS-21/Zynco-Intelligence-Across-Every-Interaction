@@ -1,7 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Providers from "@/components/Providers";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 export const metadata: Metadata = {
   title: "Mail Agent",
@@ -13,7 +12,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <Providers>
-          <ThemeToggle />
           {children}
         </Providers>
       </body>

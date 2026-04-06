@@ -39,17 +39,17 @@ export function StepProgress({ currentStep }: StepProgressProps) {
                             {/* Icon Circle */}
                             <div
                                 className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${isCompleted
-                                        ? "bg-primary border-primary"
-                                        : isActive
-                                            ? "bg-primary/20 border-primary"
-                                            : "bg-background border-border"
+                                    ? "bg-blue-600 border-blue-600"
+                                    : isActive
+                                        ? "bg-blue-50 border-blue-200"
+                                        : "bg-white border-slate-200"
                                     }`}
                             >
                                 {isCompleted ? (
                                     <CheckCircle2Icon className="w-6 h-6 text-primary-foreground" />
                                 ) : (
                                     <Icon
-                                        className={`w-5 h-5 ${isActive ? "text-primary" : "text-muted-foreground"
+                                        className={`w-5 h-5 ${isActive ? "text-blue-700" : "text-slate-500"
                                             }`}
                                     />
                                 )}
@@ -57,7 +57,7 @@ export function StepProgress({ currentStep }: StepProgressProps) {
 
                             {/* Label */}
                             <span
-                                className={`text-xs font-medium ${isActive ? "text-foreground" : "text-muted-foreground"
+                                className={`text-xs font-medium ${isActive ? "text-slate-900" : "text-slate-500"
                                     }`}
                             >
                                 {step.name}
@@ -67,7 +67,7 @@ export function StepProgress({ currentStep }: StepProgressProps) {
                         {/* Connector Line */}
                         {index < STEPS.length - 1 && (
                             <div
-                                className={`w-20 h-0.5 mx-2 ${isCompleted ? "bg-primary" : "bg-border"
+                                className={`w-20 h-0.5 mx-2 ${isCompleted ? "bg-blue-600" : "bg-slate-200"
                                     }`}
                             />
                         )}

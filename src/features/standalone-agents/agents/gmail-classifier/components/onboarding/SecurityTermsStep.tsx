@@ -26,8 +26,8 @@ export function SecurityTermsStep({ onAccept, onBack }: SecurityTermsStepProps) 
         <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header */}
             <div className="text-center space-y-2">
-                <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl mb-2">
-                    <ShieldCheck className="w-10 h-10 text-primary" />
+                <div className="mb-2 inline-flex items-center justify-center rounded-2xl bg-blue-50/70 p-3">
+                    <ShieldCheck className="w-10 h-10 text-blue-600" />
                 </div>
                 <h1 className="text-3xl font-bold tracking-tight text-foreground">Security & Data Privacy</h1>
                 <p className="text-muted-foreground max-w-xl mx-auto">
@@ -37,8 +37,8 @@ export function SecurityTermsStep({ onAccept, onBack }: SecurityTermsStepProps) 
 
             {/* Security Highlights */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-card border border-border p-4 rounded-xl space-y-2">
-                    <div className="p-2 bg-blue-500/10 rounded-lg w-fit">
+                <div className="space-y-2 rounded-xl border border-blue-100 bg-white/95 p-4">
+                    <div className="w-fit rounded-lg bg-blue-50 p-2">
                         <Lock className="w-5 h-5 text-blue-500" />
                     </div>
                     <h3 className="font-semibold text-sm">End-to-End Encryption</h3>
@@ -46,8 +46,8 @@ export function SecurityTermsStep({ onAccept, onBack }: SecurityTermsStepProps) 
                         All data transmitted between your Gmail and Spinabot is encrypted using enterprise-grade TLS 1.3.
                     </p>
                 </div>
-                <div className="bg-card border border-border p-4 rounded-xl space-y-2">
-                    <div className="p-2 bg-emerald-500/10 rounded-lg w-fit">
+                <div className="space-y-2 rounded-xl border border-emerald-100 bg-white/95 p-4">
+                    <div className="w-fit rounded-lg bg-emerald-50 p-2">
                         <Eye className="w-5 h-5 text-emerald-500" />
                     </div>
                     <h3 className="font-semibold text-sm">Minimal Data Usage</h3>
@@ -55,8 +55,8 @@ export function SecurityTermsStep({ onAccept, onBack }: SecurityTermsStepProps) 
                         We only process email metadata and content for classification. We don't sell or share your personal data.
                     </p>
                 </div>
-                <div className="bg-card border border-border p-4 rounded-xl space-y-2">
-                    <div className="p-2 bg-orange-500/10 rounded-lg w-fit">
+                <div className="space-y-2 rounded-xl border border-amber-100 bg-white/95 p-4">
+                    <div className="w-fit rounded-lg bg-amber-50 p-2">
                         <Database className="w-5 h-5 text-orange-500" />
                     </div>
                     <h3 className="font-semibold text-sm">Zero-Persistent Storage</h3>
@@ -67,14 +67,14 @@ export function SecurityTermsStep({ onAccept, onBack }: SecurityTermsStepProps) 
             </div>
 
             {/* Terms and Conditions Content */}
-            <div className="bg-card border border-border rounded-2xl flex flex-col overflow-hidden">
-                <div className="bg-muted/50 px-6 py-3 border-b border-border flex justify-between items-center">
+            <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
+                <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-3">
                     <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Standard Terms of Service</h2>
                     <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">V 2.0</span>
                 </div>
 
                 <div
-                    className="p-6 h-64 overflow-y-auto space-y-6 text-sm leading-relaxed text-muted-foreground scrollbar-thin scrollbar-thumb-border"
+                    className="scrollbar-thin scrollbar-thumb-border h-64 space-y-6 overflow-y-auto p-6 text-sm leading-relaxed text-slate-600"
                     onScroll={handleScroll}
                 >
                     <section className="space-y-2">
@@ -114,7 +114,7 @@ export function SecurityTermsStep({ onAccept, onBack }: SecurityTermsStepProps) 
                     </section>
                 </div>
 
-                <div className="px-6 py-4 border-t border-border bg-muted/30">
+                <div className="border-t border-slate-200 bg-slate-50/65 px-6 py-4">
                     <div className="flex items-start gap-4">
                         <Checkbox
                             id="terms-agree"
@@ -136,7 +136,7 @@ export function SecurityTermsStep({ onAccept, onBack }: SecurityTermsStepProps) 
                     </div>
                 </div>
 
-                <div className="p-4 bg-muted/20 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-200 bg-slate-50/40 p-4 sm:flex-row">
                     <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                         <div className="p-1 bg-emerald-500/10 rounded-full text-emerald-500">
                             <CheckCircle2 className="w-4 h-4" />
