@@ -159,17 +159,43 @@ export default function OnboardingView() {
   const initWhatsApp = async () => {
     try {
         setWaStatus('INITIALIZING');
-        await fetch('/api/whatsapp/status', { method: 'POST' });
+      const res = await fetch('/api/whatsapp/status', { method: 'POST' });
+      const data = await res.json();
+
+      if (data?.mode === 'unsupported') {
+        setWaStatus('DISCONNECTED');
+        setWaDialogOpen(false);
+        toast.error(data?.message || 'WhatsApp Web local sessions are not supported in this environment.');
+        return;
+      }
+
+      if (data?.mode === 'cloud' || data?.status === 'READY') {
+        setWaStatus('READY');
+        setWaDialogOpen(false);
+        if (!selected.includes('whatsapp')) {
+          setSelected(prev => [...prev, 'whatsapp']);
+        }
+        toast.success('WhatsApp cloud mode is ready.');
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to initialize WhatsApp');
+      }
+
         setWaDialogOpen(true);
     } catch (err) {
+      setWaStatus('DISCONNECTED');
         toast.error("Failed to initialize WhatsApp");
     }
   };
 
-  const filtered = PLATFORMS.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.type.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = PLATFORMS
+    .filter((p) => p.id !== "whatsapp")
+    .filter(p => 
+      p.name.toLowerCase().includes(search.toLowerCase()) || 
+      p.type.toLowerCase().includes(search.toLowerCase())
+    );
 
   const togglePlatform = (id: string) => {
     if (id === 'whatsapp' && !selected.includes('whatsapp')) {

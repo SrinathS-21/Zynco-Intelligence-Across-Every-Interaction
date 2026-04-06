@@ -5,6 +5,10 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
+function isVercelRuntime(): boolean {
+    return process.env.VERCEL === '1';
+}
+
 // Check if a saved WhatsApp session exists on disk
 function hasSavedSession(): boolean {
     const sessionPath = path.join(process.cwd(), '.wwebjs_auth/session-zynco-hub');
@@ -24,6 +28,15 @@ export async function GET() {
             return NextResponse.json({ status: 'READY', qr: null, mode: 'cloud' });
         }
 
+        if (isVercelRuntime()) {
+            return NextResponse.json({
+                status: 'DISCONNECTED',
+                qr: null,
+                mode: 'unsupported',
+                message: 'Legacy WhatsApp Web session is not supported on Vercel. Set WHAPI_API_TOKEN to use cloud mode.',
+            });
+        }
+
         // Auto-reconnect: if status is DISCONNECTED but a saved session exists,
         if (status === 'DISCONNECTED' && hasSavedSession()) {
             console.log('[WhatsApp] Saved session detected — auto-reconnecting legacy core...');
@@ -39,6 +52,20 @@ export async function GET() {
 
 export async function POST() {
     try {
+        const whapiEnabled = !!process.env.WHAPI_API_TOKEN;
+        if (whapiEnabled) {
+            return NextResponse.json({ status: 'READY', qr: null, mode: 'cloud' });
+        }
+
+        if (isVercelRuntime()) {
+            return NextResponse.json({
+                status: 'DISCONNECTED',
+                qr: null,
+                mode: 'unsupported',
+                message: 'Legacy WhatsApp Web session is not supported on Vercel. Set WHAPI_API_TOKEN to use cloud mode.',
+            });
+        }
+
         await getWhatsAppClient();
         return NextResponse.json({ status: 'INITIALIZING' });
     } catch (error) {
