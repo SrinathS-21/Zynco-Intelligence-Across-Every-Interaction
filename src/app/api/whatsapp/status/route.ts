@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getWhatsAppStatus, getWhatsAppClient } from '@/lib/whatsapp';
 import fs from 'fs';
 import path from 'path';
 
@@ -19,8 +18,6 @@ function hasSavedSession(): boolean {
 
 export async function GET() {
     try {
-        const { status, qr } = getWhatsAppStatus();
-
         // 🛡️ [PROTECTION] If a Whapi Token is detected on the client-side/env, do not trigger auto-reconnect
         // of the legacy headless engine to avoid resource conflicts.
         const whapiEnabled = !!process.env.WHAPI_API_TOKEN;
@@ -36,6 +33,9 @@ export async function GET() {
                 message: 'Legacy WhatsApp Web session is not supported on Vercel. Set WHAPI_API_TOKEN to use cloud mode.',
             });
         }
+
+        const { getWhatsAppStatus, getWhatsAppClient } = await import('@/lib/whatsapp');
+        const { status, qr } = getWhatsAppStatus();
 
         // Auto-reconnect: if status is DISCONNECTED but a saved session exists,
         if (status === 'DISCONNECTED' && hasSavedSession()) {
@@ -66,6 +66,7 @@ export async function POST() {
             });
         }
 
+        const { getWhatsAppClient } = await import('@/lib/whatsapp');
         await getWhatsAppClient();
         return NextResponse.json({ status: 'INITIALIZING' });
     } catch (error) {

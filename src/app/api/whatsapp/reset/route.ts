@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
-import { resetWhatsApp } from '@/lib/whatsapp';
 
 export async function POST() {
     try {
+        if (process.env.VERCEL === '1') {
+            return NextResponse.json({ status: 'RESET', mode: 'unsupported' });
+        }
+
+        const { resetWhatsApp } = await import('@/lib/whatsapp');
         await resetWhatsApp();
         return NextResponse.json({ status: 'RESET' });
     } catch (error) {
