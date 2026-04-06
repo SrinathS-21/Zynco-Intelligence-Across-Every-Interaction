@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NEXT_DISABLE_WEBPACK_CACHE=1 node scripts/next-dev-start.cjs",
-    "dev:clean": "node scripts/next-clean-safe.cjs && cross-env NEXT_DISABLE_WEBPACK_CACHE=1 node scripts/next-dev-start.cjs",
+    "dev": "node scripts/next-dev-start.cjs",
+    "dev:clean": "node scripts/next-clean-safe.cjs && node scripts/next-dev-start.cjs",
     "dev:stable": "node scripts/next-clean-safe.cjs && node scripts/next-dev-start.cjs --turbopack",
     "clean:next": "node scripts/next-clean-safe.cjs",
     "test:twitter-flow": "node scripts/twitter-flow-test.cjs",

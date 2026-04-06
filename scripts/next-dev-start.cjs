@@ -2,6 +2,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
+if (!process.env.NEXT_DISABLE_WEBPACK_CACHE) {
+    process.env.NEXT_DISABLE_WEBPACK_CACHE = "1";
+}
+
 const root = process.cwd();
 const lockFile = path.join(root, ".next-dev.lock");
 
