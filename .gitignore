@@ -27,3 +27,7 @@ prisma/dev.db-journal
 # misc
 .DS_Store
 Thumbs.db
+
+# whatsapp-web.js local session artifacts
+.wwebjs_auth/
+.wwebjs_cache/
