@@ -220,7 +220,13 @@ export async function GET(request: NextRequest) {
             cache: "no-store",
         });
         const profileJson = await readJson(profileResponse);
-        const profileWarning = !profileResponse.ok ? safeErrorDetail(profileJson) : "";
+
+        if (!profileResponse.ok) {
+            return dashboardRedirect(request, {
+                status: "failure",
+                error: safeErrorDetail(profileJson),
+            });
+        }
 
         const profileData =
             profileJson && typeof profileJson === "object" && profileJson !== null
@@ -247,17 +253,18 @@ export async function GET(request: NextRequest) {
                 ? String((profileData as Record<string, unknown>).id).trim()
                 : "";
 
+        if (!username || !displayName || !externalUserId) {
+            return dashboardRedirect(request, {
+                status: "failure",
+                error: "Twitter OAuth did not return complete profile identity. Please reconnect and approve access.",
+            });
+        }
+
         try {
             const agent = await getOrCreateDefaultAgent(user.id);
             const currentConfig = getConfig(agent);
             const currentData = getData(agent);
-            const currentTwitter = currentConfig.socialConnections?.twitter || {};
-
-            const fallbackIdentity = String(currentTwitter.accountId || currentTwitter.username || "")
-                .replace(/^@+/, "")
-                .trim();
-            const resolvedIdentity = (username || fallbackIdentity).replace(/^@+/, "").trim();
-            const isConnected = Boolean(resolvedIdentity);
+            const normalizedUsername = username.replace(/^@+/, "").trim();
 
             const nextConfig: AgentConfig = {
                 ...currentConfig,
@@ -265,20 +272,20 @@ export async function GET(request: NextRequest) {
                     instagram: { ...(currentConfig.socialConnections?.instagram || {}) },
                     linkedin: { ...(currentConfig.socialConnections?.linkedin || {}) },
                     twitter: {
-                        ...currentTwitter,
-                        accountId: resolvedIdentity,
-                        username: username || String(currentTwitter.username || "").replace(/^@+/, "").trim() || undefined,
-                        displayName: displayName || currentTwitter.displayName || undefined,
-                        avatarUrl: avatarUrl || currentTwitter.avatarUrl || null,
-                        externalUserId: externalUserId || currentTwitter.externalUserId || undefined,
+                        ...(currentConfig.socialConnections?.twitter || {}),
+                        accountId: normalizedUsername,
+                        username: normalizedUsername,
+                        displayName,
+                        avatarUrl: avatarUrl || null,
+                        externalUserId,
                         oauthAccessToken: accessToken,
                         oauthRefreshToken: refreshToken || undefined,
                         oauthTokenType: tokenType || "Bearer",
                         oauthScope: tokenScope || undefined,
                         oauthExpiresAt,
-                        connectedAt: isConnected ? (currentTwitter.connectedAt || new Date().toISOString()) : null,
-                        disconnectedAt: isConnected ? null : new Date().toISOString(),
-                        status: isConnected ? "connected" : "disconnected",
+                        connectedAt: new Date().toISOString(),
+                        disconnectedAt: null,
+                        status: "connected",
                     },
                 },
                 socialOnboardingCompleted: true,
@@ -298,19 +305,11 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        const normalizedUsername = username.replace(/^@+/, "").trim();
-        if (normalizedUsername) {
-            return dashboardRedirect(request, {
-                status: "success",
-                accountId: normalizedUsername,
-                username: normalizedUsername,
-                displayName: displayName || normalizedUsername,
-            });
-        }
-
         return dashboardRedirect(request, {
             status: "success",
-            error: profileWarning || "Authorization completed. Enter your Twitter username and click Save Connection to finish setup.",
+            accountId: username.replace(/^@+/, "").trim(),
+            username: username.replace(/^@+/, "").trim(),
+            displayName,
         });
     } catch {
         return dashboardRedirect(request, { status: "failure", error: "Twitter OAuth callback failed" });

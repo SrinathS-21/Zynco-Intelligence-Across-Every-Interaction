@@ -209,8 +209,22 @@ export async function POST(request: NextRequest) {
     if (channel && typeof accountId === "string") {
       const nextAccountId = (accountId || "").trim();
       const previous = nextConfig.socialConnections![channel] || {};
-      const isTwitterWithoutOAuth = channel === "twitter" && nextAccountId && !(previous.oauthAccessToken || previous.oauthRefreshToken);
-      const shouldMarkConnected = Boolean(nextAccountId) && !isTwitterWithoutOAuth;
+
+      if (channel === "twitter" && nextAccountId) {
+        const oauthPresent = Boolean(previous.oauthAccessToken || previous.oauthRefreshToken);
+        const knownIdentity = String(previous.username || previous.accountId || "").replace(/^@+/, "").trim();
+        const incomingIdentity = nextAccountId.replace(/^@+/, "").trim();
+
+        if (!oauthPresent) {
+          return badRequest("Connect Twitter through OAuth first.");
+        }
+
+        if (!knownIdentity || knownIdentity.toLowerCase() !== incomingIdentity.toLowerCase()) {
+          return badRequest("Twitter identity is managed by OAuth. Reconnect to switch accounts.");
+        }
+      }
+
+      const shouldMarkConnected = Boolean(nextAccountId) && (channel !== "twitter" || Boolean(previous.oauthAccessToken || previous.oauthRefreshToken));
 
       nextConfig.socialConnections![channel] = {
         ...previous,

@@ -6902,10 +6902,10 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
 
             if (!accountIdFromQuery) {
                 setConnectDialogChannel(channel);
-                toast.success(
+                toast.error(
                     connectError
-                        ? `${channelLabel(channel)} authorized. ${connectError}`
-                        : `${channelLabel(channel)} connected. Save your account ID to finish setup.`,
+                        ? `${channelLabel(channel)} OAuth completed, but identity was not returned: ${connectError}`
+                        : `${channelLabel(channel)} OAuth completed, but profile identity was not returned. Please reconnect.`,
                 );
                 clearConnectParams();
                 return;
@@ -7007,6 +7007,11 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
 
     const handleSaveChannelConnection = async () => {
         if (!connectDialogChannel) return;
+
+        if (connectDialogChannel === "twitter") {
+            toast.error("Twitter connection is OAuth-managed. Use Open Provider Login to connect or reconnect.");
+            return;
+        }
 
         const accountId = channelState[connectDialogChannel].accountId.trim();
         if (!accountId) {
@@ -8181,7 +8186,7 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
                             {connectDialogChannel === "twitter" && dialogConnected
                                 ? "Manage your connected X account. You can reconnect with a different account or disconnect here."
                                 : connectDialogChannel === "twitter"
-                                    ? "Authenticate with X (Twitter) in the provider window. After success, your account ID is auto-filled."
+                                    ? "Authenticate with X (Twitter) in the provider window. Account identity is set only from OAuth callback."
                                     : "Authenticate through the provider login, then paste your Unipile account ID to complete connection."}
                         </DialogDescription>
                     </DialogHeader>
@@ -8191,7 +8196,7 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
                             {connectDialogChannel === "twitter" && dialogConnected
                                 ? "This account is already connected. Use Open Provider Login to switch accounts, or click Disconnect to remove this connection."
                                 : connectDialogChannel === "twitter"
-                                    ? "Step 1: Click provider login. Step 2: Sign in to X and approve access. Step 3: Return here to confirm profile details or disconnect this account."
+                                    ? "Step 1: Click provider login. Step 2: Sign in to X and approve access. Step 3: Return here; identity is accepted only from OAuth response."
                                     : "Step 1: Click provider login. Step 2: Sign in and complete verification. Step 3: Paste the resulting account ID below. If verification fails, close that window and click provider login again to regenerate a fresh auth session."}
                         </div>
 
@@ -8219,9 +8224,12 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
                                 }
                                 onChange={(event) => {
                                     if (!connectDialogChannel) return;
+                                    if (connectDialogChannel === "twitter") return;
                                     updateChannelState(connectDialogChannel, { accountId: event.target.value });
                                 }}
-                                placeholder={connectDialogChannel === "twitter" ? "Twitter username (without @)" : "Paste account ID from Unipile"}
+                                placeholder={connectDialogChannel === "twitter" ? "OAuth-managed (read only)" : "Paste account ID from Unipile"}
+                                readOnly={connectDialogChannel === "twitter"}
+                                disabled={connectDialogChannel === "twitter"}
                             />
                         </div>
                     </div>
@@ -8235,9 +8243,11 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
                         <Button type="button" variant="outline" className="border-slate-300" onClick={handleCloseConnectDialog}>
                             Cancel
                         </Button>
-                        <Button type="button" className="bg-black text-white hover:bg-slate-900" onClick={() => void handleSaveChannelConnection()}>
-                            Save Connection
-                        </Button>
+                        {connectDialogChannel !== "twitter" ? (
+                            <Button type="button" className="bg-black text-white hover:bg-slate-900" onClick={() => void handleSaveChannelConnection()}>
+                                Save Connection
+                            </Button>
+                        ) : null}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
