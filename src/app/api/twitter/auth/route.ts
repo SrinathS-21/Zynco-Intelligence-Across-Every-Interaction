@@ -86,8 +86,18 @@ function redirectFailure(request: NextRequest, message: string) {
     return NextResponse.redirect(url.toString());
 }
 
+function maskClientId(value: string) {
+    const trimmed = (value || "").trim();
+    if (!trimmed) return "";
+    if (trimmed.length <= 10) {
+        return `${trimmed.slice(0, 2)}...${trimmed.slice(-2)}`;
+    }
+    return `${trimmed.slice(0, 6)}...${trimmed.slice(-6)}`;
+}
+
 export async function GET(request: NextRequest) {
     try {
+        const debugMode = request.nextUrl.searchParams.get("debug") === "1";
         const user = await requireUser(request);
         const clientId = (process.env.TWITTER_CLIENT_ID || "").replace(/['"]/g, "").trim();
 
@@ -109,6 +119,21 @@ export async function GET(request: NextRequest) {
             code_challenge: codeChallenge,
             code_challenge_method: "S256",
         });
+
+        if (debugMode) {
+            const authorizeUrl = `${X_AUTHORIZE_URL}?${params.toString()}`;
+            return NextResponse.json({
+                ok: true,
+                debug: {
+                    userId: user.id,
+                    clientIdMasked: maskClientId(clientId),
+                    effectiveBaseUrl: resolveBaseUrl(request),
+                    effectiveCallbackUrl: callbackUrl,
+                    configuredCallbackEnv: (process.env.TWITTER_OAUTH_CALLBACK_URL || "").replace(/['"]/g, "").trim(),
+                    authorizeUrl,
+                },
+            });
+        }
 
         const oauthPayload: OAuthCookiePayload = {
             state,
