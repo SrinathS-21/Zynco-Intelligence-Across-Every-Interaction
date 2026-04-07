@@ -44,7 +44,18 @@ function resolveBaseUrl(request: NextRequest): string {
 function resolveCallbackUrl(request: NextRequest): string {
     const configured = process.env.TWITTER_OAUTH_CALLBACK_URL;
     if (configured) {
-        return configured.replace(/['"]/g, "").trim();
+        const sanitized = configured.replace(/['"]/g, "").trim();
+        const fallback = `${resolveBaseUrl(request)}/api/twitter/callback`;
+        try {
+            const configuredHost = new URL(sanitized).host;
+            const fallbackHost = new URL(fallback).host;
+            if (configuredHost !== fallbackHost) {
+                return fallback;
+            }
+        } catch {
+            return fallback;
+        }
+        return sanitized;
     }
 
     return `${resolveBaseUrl(request)}/api/twitter/callback`;
