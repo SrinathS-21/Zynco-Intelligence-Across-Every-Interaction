@@ -6382,14 +6382,17 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
 
         try {
             if (channel === "twitter") {
+                const shouldLoadSnapshot = Boolean((accountId || "").trim());
                 const [historyRes, snapshotRes, unipileRes] = await Promise.all([
                     fetch("/api/twitter/history", { cache: "no-store" }),
-                    fetch("/api/twitter/live-snapshot?max_results=16", { cache: "no-store" }),
+                    shouldLoadSnapshot
+                        ? fetch("/api/twitter/live-snapshot?max_results=16", { cache: "no-store" })
+                        : Promise.resolve(null),
                     fetch(`/api/unipile/feed?platform=twitter&accountId=${encodeURIComponent(accountId || "")}`, { cache: "no-store" }),
                 ]);
 
                 const history = historyRes.ok ? await historyRes.json() : [];
-                const snapshotPayload = snapshotRes.ok ? await snapshotRes.json() : null;
+                const snapshotPayload = snapshotRes && snapshotRes.ok ? await snapshotRes.json() : null;
                 const unipileData = await unipileRes.json().catch(() => null);
                 const unipilePosts = Array.isArray(unipileData?.posts) ? unipileData.posts : [];
                 const unipileInbox = Array.isArray(unipileData?.inbox) ? unipileData.inbox : [];
@@ -6427,9 +6430,9 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
                                 : [];
 
                 let twitterError: string | null = null;
-                if (!historyRes.ok && !snapshotRes.ok && !unipileRes.ok) {
+                if (!historyRes.ok && (!snapshotRes || !snapshotRes.ok) && !unipileRes.ok) {
                     twitterError = "Failed to load Twitter timeline and inbox";
-                } else if (!historyRes.ok && !snapshotRes.ok) {
+                } else if (shouldLoadSnapshot && !historyRes.ok && snapshotRes && !snapshotRes.ok) {
                     twitterError = "Failed to load Twitter timeline from history/snapshot";
                 }
 
@@ -6866,6 +6869,7 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
         if (!status || !isSocialChannel(platform)) return;
 
         const accountIdFromQuery = (searchParams.get("account_id") || searchParams.get("accountId") || "").trim();
+        const connectError = (searchParams.get("error") || "").trim();
 
         const clearConnectParams = () => {
             const currentUrl = new URL(window.location.href);
@@ -6884,7 +6888,11 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
         if (status === "failure") {
             setActiveSection(channel);
             setConnectDialogChannel(channel);
-            toast.error(`${channelLabel(channel)} login failed. Please try connecting again.`);
+            toast.error(
+                connectError
+                    ? `${channelLabel(channel)} login failed: ${connectError}`
+                    : `${channelLabel(channel)} login failed. Please try connecting again.`,
+            );
             clearConnectParams();
             return;
         }
