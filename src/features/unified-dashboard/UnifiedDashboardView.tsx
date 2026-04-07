@@ -6902,7 +6902,11 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
 
             if (!accountIdFromQuery) {
                 setConnectDialogChannel(channel);
-                toast.success(`${channelLabel(channel)} connected. Save your account ID to finish setup.`);
+                toast.success(
+                    connectError
+                        ? `${channelLabel(channel)} authorized. ${connectError}`
+                        : `${channelLabel(channel)} connected. Save your account ID to finish setup.`,
+                );
                 clearConnectParams();
                 return;
             }
