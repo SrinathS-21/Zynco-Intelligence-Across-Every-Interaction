@@ -95,11 +95,18 @@ function maskClientId(value: string) {
     return `${trimmed.slice(0, 6)}...${trimmed.slice(-6)}`;
 }
 
+function fingerprintSecret(value: string) {
+    const trimmed = (value || "").trim();
+    if (!trimmed) return "";
+    return createHash("sha256").update(trimmed).digest("hex").slice(0, 12);
+}
+
 export async function GET(request: NextRequest) {
     try {
         const debugMode = request.nextUrl.searchParams.get("debug") === "1";
         const user = await requireUser(request);
         const clientId = (process.env.TWITTER_CLIENT_ID || "").replace(/['"]/g, "").trim();
+        const clientSecret = (process.env.TWITTER_CLIENT_SECRET || "").replace(/['"]/g, "").trim();
 
         if (!clientId) {
             return redirectFailure(request, "TWITTER_CLIENT_ID is not configured");
@@ -127,6 +134,8 @@ export async function GET(request: NextRequest) {
                 debug: {
                     userId: user.id,
                     clientIdMasked: maskClientId(clientId),
+                    hasClientSecret: Boolean(clientSecret),
+                    clientSecretFingerprint: fingerprintSecret(clientSecret),
                     effectiveBaseUrl: resolveBaseUrl(request),
                     effectiveCallbackUrl: callbackUrl,
                     configuredCallbackEnv: (process.env.TWITTER_OAUTH_CALLBACK_URL || "").replace(/['"]/g, "").trim(),
