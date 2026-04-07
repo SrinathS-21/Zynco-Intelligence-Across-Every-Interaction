@@ -5,8 +5,11 @@ import { getConfig, getData, getOrCreateDefaultAgent } from "@/lib/agent-store";
 import { AgentConfig } from "@/lib/types";
 
 const OAUTH_COOKIE_NAME = "zynco_twitter_oauth";
-const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
-const X_ME_URL = "https://api.x.com/2/users/me?user.fields=id,name,username,profile_image_url";
+const X_TOKEN_URLS = ["https://api.x.com/2/oauth2/token", "https://api.twitter.com/2/oauth2/token"];
+const X_ME_URLS = [
+    "https://api.x.com/2/users/me?user.fields=id,name,username,profile_image_url",
+    "https://api.twitter.com/2/users/me?user.fields=id,name,username,profile_image_url",
+];
 
 type OAuthCookiePayload = {
     state: string;
@@ -16,13 +19,31 @@ type OAuthCookiePayload = {
 };
 
 function resolveBaseUrl(request: NextRequest): string {
+    const forwardedProto = (request.headers.get("x-forwarded-proto") || "").trim();
+    const forwardedHost = (request.headers.get("x-forwarded-host") || request.headers.get("host") || "").trim();
+    const requestBaseUrl = forwardedHost
+        ? `${forwardedProto || request.nextUrl.protocol.replace(":", "")}://${forwardedHost}`
+        : `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+
     const configured = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || process.env.NEXTAUTH_URL;
     if (configured) {
-        return configured.replace(/\/$/, "");
+        const sanitized = configured.replace(/\/$/, "");
+
+        // On preview deployments, a fixed app URL can break OAuth cookie state if host differs.
+        try {
+            const configuredHost = new URL(sanitized).host;
+            const requestHost = new URL(requestBaseUrl).host;
+            if (configuredHost !== requestHost) {
+                return requestBaseUrl.replace(/\/$/, "");
+            }
+        } catch {
+            // Fall back to configured value if URL parsing fails.
+        }
+
+        return sanitized;
     }
 
-    const url = request.nextUrl;
-    return `${url.protocol}//${url.host}`;
+    return requestBaseUrl.replace(/\/$/, "");
 }
 
 function resolveCallbackUrl(request: NextRequest): string {
@@ -99,6 +120,53 @@ async function readJson(response: Response) {
     }
 }
 
+function formatOAuthError(payload: unknown): string {
+    const detail = safeErrorDetail(payload);
+    if (/attached to (a )?project/i.test(detail)) {
+        return "Twitter app is not attached to an X Project, or env credentials are from a different app/project.";
+    }
+    return detail;
+}
+
+type TokenAttempt = {
+    headers: Record<string, string>;
+    body: string;
+};
+
+function buildTokenAttempts(basePayload: URLSearchParams, clientId: string, clientSecret: string): TokenAttempt[] {
+    const attempts: TokenAttempt[] = [];
+
+    if (clientSecret) {
+        attempts.push({
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+            },
+            body: basePayload.toString(),
+        });
+    }
+
+    if (clientSecret) {
+        const bodyWithSecret = new URLSearchParams(basePayload);
+        bodyWithSecret.set("client_secret", clientSecret);
+        attempts.push({
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: bodyWithSecret.toString(),
+        });
+    }
+
+    attempts.push({
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: basePayload.toString(),
+    });
+
+    return attempts;
+}
+
 export async function GET(request: NextRequest) {
     try {
         const oauthError = request.nextUrl.searchParams.get("error");
@@ -159,25 +227,36 @@ export async function GET(request: NextRequest) {
             code_verifier: oauthPayload.codeVerifier,
         });
 
-        const tokenHeaders: Record<string, string> = {
-            "Content-Type": "application/x-www-form-urlencoded",
-        };
+        const tokenAttempts = buildTokenAttempts(tokenPayload, clientId, clientSecret);
+        let tokenJson: unknown = null;
+        let tokenResponse: Response | null = null;
 
-        if (clientSecret) {
-            tokenHeaders.Authorization = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
+        for (const tokenUrl of X_TOKEN_URLS) {
+            for (const attempt of tokenAttempts) {
+                const currentResponse = await fetch(tokenUrl, {
+                    method: "POST",
+                    headers: attempt.headers,
+                    body: attempt.body,
+                });
+                const currentJson = await readJson(currentResponse);
+
+                tokenResponse = currentResponse;
+                tokenJson = currentJson;
+
+                if (currentResponse.ok) {
+                    break;
+                }
+            }
+
+            if (tokenResponse?.ok) {
+                break;
+            }
         }
 
-        const tokenResponse = await fetch(X_TOKEN_URL, {
-            method: "POST",
-            headers: tokenHeaders,
-            body: tokenPayload.toString(),
-        });
-        const tokenJson = await readJson(tokenResponse);
-
-        if (!tokenResponse.ok) {
+        if (!tokenResponse || !tokenResponse.ok) {
             return dashboardRedirect(request, {
                 status: "failure",
-                error: safeErrorDetail(tokenJson),
+                error: formatOAuthError(tokenJson),
             });
         }
 
@@ -215,16 +294,28 @@ export async function GET(request: NextRequest) {
             return dashboardRedirect(request, { status: "failure", error: "Access token not returned by X" });
         }
 
-        const profileResponse = await fetch(X_ME_URL, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            cache: "no-store",
-        });
-        const profileJson = await readJson(profileResponse);
+        let profileJson: unknown = null;
+        let profileResponse: Response | null = null;
 
-        if (!profileResponse.ok) {
+        for (const meUrl of X_ME_URLS) {
+            const currentResponse = await fetch(meUrl, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+                cache: "no-store",
+            });
+            const currentJson = await readJson(currentResponse);
+
+            profileResponse = currentResponse;
+            profileJson = currentJson;
+
+            if (currentResponse.ok) {
+                break;
+            }
+        }
+
+        if (!profileResponse || !profileResponse.ok) {
             return dashboardRedirect(request, {
                 status: "failure",
-                error: safeErrorDetail(profileJson),
+                error: formatOAuthError(profileJson),
             });
         }
 

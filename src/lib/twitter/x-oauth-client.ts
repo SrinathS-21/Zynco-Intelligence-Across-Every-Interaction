@@ -3,7 +3,7 @@ import { getConfig, getOrCreateDefaultAgent } from "@/lib/agent-store";
 import type { AgentConfig } from "@/lib/types";
 import { ensureTwitterAccessToken } from "@/lib/twitter/oauth";
 
-const X_API_BASE = "https://api.x.com/2";
+const X_API_BASES = ["https://api.x.com/2", "https://api.twitter.com/2"];
 
 function readString(value: unknown) {
     return typeof value === "string" ? value.trim() : "";
@@ -87,8 +87,8 @@ type XRequestParams = {
     body?: unknown;
 };
 
-function buildXApiUrl(path: string, query?: Record<string, string | number | boolean | undefined>) {
-    const url = new URL(`${X_API_BASE}${path}`);
+function buildXApiUrl(base: string, path: string, query?: Record<string, string | number | boolean | undefined>) {
+    const url = new URL(`${base}${path}`);
     if (query) {
         Object.entries(query).forEach(([key, value]) => {
             if (value === undefined || value === null || value === "") return;
@@ -107,14 +107,36 @@ async function executeXRequest(accessToken: string, params: XRequestParams) {
         headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(buildXApiUrl(params.path, params.query), {
-        method: params.method,
-        headers,
-        body: params.body !== undefined ? JSON.stringify(params.body) : undefined,
-    });
+    const body = params.body !== undefined ? JSON.stringify(params.body) : undefined;
+    let lastResult: { response: Response; data: unknown } | null = null;
+    let lastError: unknown = null;
 
-    const data = await safeJson(response);
-    return { response, data };
+    for (const base of X_API_BASES) {
+        try {
+            const response = await fetch(buildXApiUrl(base, params.path, params.query), {
+                method: params.method,
+                headers,
+                body,
+            });
+
+            const data = await safeJson(response);
+            const result = { response, data };
+
+            if (response.ok) {
+                return result;
+            }
+
+            lastResult = result;
+        } catch (error) {
+            lastError = error;
+        }
+    }
+
+    if (lastResult) {
+        return lastResult;
+    }
+
+    throw lastError instanceof Error ? lastError : new Error("Twitter API request failed");
 }
 
 export async function xRequestWithAutoRefresh(context: TwitterAuthContext, params: XRequestParams) {

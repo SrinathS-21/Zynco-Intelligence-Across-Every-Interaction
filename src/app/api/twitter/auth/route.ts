@@ -14,13 +14,31 @@ type OAuthCookiePayload = {
 };
 
 function resolveBaseUrl(request: NextRequest): string {
+    const forwardedProto = (request.headers.get("x-forwarded-proto") || "").trim();
+    const forwardedHost = (request.headers.get("x-forwarded-host") || request.headers.get("host") || "").trim();
+    const requestBaseUrl = forwardedHost
+        ? `${forwardedProto || request.nextUrl.protocol.replace(":", "")}://${forwardedHost}`
+        : `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+
     const configured = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || process.env.NEXTAUTH_URL;
     if (configured) {
-        return configured.replace(/\/$/, "");
+        const sanitized = configured.replace(/\/$/, "");
+
+        // On preview deployments, a fixed app URL can break OAuth cookie state if host differs.
+        try {
+            const configuredHost = new URL(sanitized).host;
+            const requestHost = new URL(requestBaseUrl).host;
+            if (configuredHost !== requestHost) {
+                return requestBaseUrl.replace(/\/$/, "");
+            }
+        } catch {
+            // Fall back to configured value if URL parsing fails.
+        }
+
+        return sanitized;
     }
 
-    const url = request.nextUrl;
-    return `${url.protocol}//${url.host}`;
+    return requestBaseUrl.replace(/\/$/, "");
 }
 
 function resolveCallbackUrl(request: NextRequest): string {

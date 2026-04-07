@@ -1,7 +1,12 @@
 import { prisma } from "@/lib/db";
 import type { AgentConfig } from "@/lib/types";
 
-const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
+const X_TOKEN_URLS = ["https://api.x.com/2/oauth2/token", "https://api.twitter.com/2/oauth2/token"];
+
+type TokenAttempt = {
+    headers: Record<string, string>;
+    body: string;
+};
 
 function readString(value: unknown) {
     return typeof value === "string" ? value.trim() : "";
@@ -22,6 +27,40 @@ async function safeJson(response: Response) {
     } catch {
         return { raw: text };
     }
+}
+
+function buildTokenAttempts(basePayload: URLSearchParams, clientId: string, clientSecret: string): TokenAttempt[] {
+    const attempts: TokenAttempt[] = [];
+
+    if (clientSecret) {
+        attempts.push({
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+            },
+            body: basePayload.toString(),
+        });
+    }
+
+    if (clientSecret) {
+        const bodyWithSecret = new URLSearchParams(basePayload);
+        bodyWithSecret.set("client_secret", clientSecret);
+        attempts.push({
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: bodyWithSecret.toString(),
+        });
+    }
+
+    attempts.push({
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: basePayload.toString(),
+    });
+
+    return attempts;
 }
 
 type EnsureTokenParams = {
@@ -78,22 +117,33 @@ export async function ensureTwitterAccessToken(params: EnsureTokenParams): Promi
         client_id: clientId,
     });
 
-    const tokenHeaders: Record<string, string> = {
-        "Content-Type": "application/x-www-form-urlencoded",
-    };
+    const tokenAttempts = buildTokenAttempts(tokenPayload, clientId, clientSecret);
+    let tokenResponse: Response | null = null;
+    let tokenJson: unknown = null;
 
-    if (clientSecret) {
-        tokenHeaders.Authorization = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
+    for (const tokenUrl of X_TOKEN_URLS) {
+        for (const attempt of tokenAttempts) {
+            const currentResponse = await fetch(tokenUrl, {
+                method: "POST",
+                headers: attempt.headers,
+                body: attempt.body,
+            });
+            const currentJson = await safeJson(currentResponse);
+
+            tokenResponse = currentResponse;
+            tokenJson = currentJson;
+
+            if (currentResponse.ok) {
+                break;
+            }
+        }
+
+        if (tokenResponse?.ok) {
+            break;
+        }
     }
 
-    const tokenResponse = await fetch(X_TOKEN_URL, {
-        method: "POST",
-        headers: tokenHeaders,
-        body: tokenPayload.toString(),
-    });
-    const tokenJson = await safeJson(tokenResponse);
-
-    if (!tokenResponse.ok) {
+    if (!tokenResponse || !tokenResponse.ok) {
         const detail =
             tokenJson && typeof tokenJson === "object" && typeof (tokenJson as Record<string, unknown>).error_description === "string"
                 ? String((tokenJson as Record<string, unknown>).error_description)
