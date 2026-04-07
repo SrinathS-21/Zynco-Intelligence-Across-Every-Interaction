@@ -6893,7 +6893,9 @@ export default function UnifiedDashboardView({ userId }: { userId: string }) {
                     ? `${channelLabel(channel)} login failed: ${connectError}`
                     : `${channelLabel(channel)} login failed. Please try connecting again.`,
             );
-            clearConnectParams();
+            if (channel !== "twitter") {
+                clearConnectParams();
+            }
             return;
         }
 
